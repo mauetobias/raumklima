@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 import yaml
 
 import netatmo
+import protokoll
 
 
 def entscheidung(regel, wert):
@@ -52,6 +53,7 @@ def aktive_regel(regel, jetzt=None):
 
 def geraete_steuern(regeln):
     werte = netatmo.messwerte()
+    protokoll.setzen(**werte)
     fehler = False
     for regel in regeln:
         try:
@@ -60,6 +62,7 @@ def geraete_steuern(regeln):
             ergebnis = modul.schalten(regel, entscheidung(regel, werte.get(regel["messwert"])))
             if regel["nacht"]:
                 ergebnis += " (Nachtruhe)"
+            protokoll.setzen(nachtruhe=regel["nacht"], entfeuchter_aktion=ergebnis)
             print(f"{regel['name']}: {ergebnis}")
         except Exception as e:  # ein Gerät darf die anderen nicht blockieren
             fehler = True
@@ -72,7 +75,10 @@ def aufgaben_erledigen(aufgaben):
     for aufgabe in aufgaben:
         try:
             modul = importlib.import_module(f"aufgaben.{aufgabe['typ']}")
-            print(f"{aufgabe['name']}: {modul.ausfuehren(aufgabe)}")
+            ergebnis = modul.ausfuehren(aufgabe)
+            print(f"{aufgabe['name']}: {ergebnis}")
+            if aufgabe["typ"] == "roborock":
+                protokoll.setzen(roborock=ergebnis)
         except Exception as e:
             fehler = True
             print(f"{aufgabe['name']}: Fehler ({type(e).__name__}: {str(e)[:80]})")
@@ -110,6 +116,10 @@ def main():
         fehler = True
         print(f"Home Coach: Fehler ({type(e).__name__}: {str(e)[:80]})")
     fehler |= aufgaben_erledigen(regeln.get("aufgaben", []))
+    try:
+        protokoll.speichern()
+    except Exception as e:
+        print(f"Protokoll: Fehler ({type(e).__name__})")
     sys.exit(1 if fehler else 0)
 
 

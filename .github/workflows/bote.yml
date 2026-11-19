@@ -15,7 +15,7 @@ on:
         required: false
 
 permissions:
-  contents: read
+  contents: write  # für den verschlüsselten Datenzweig „daten“
   actions: write   # nur für den Wachhalter
 
 concurrency:
@@ -47,6 +47,14 @@ jobs:
             speicher-
             netatmo-
 
+      - name: Datenzweig holen
+        run: |
+          mkdir -p datenzweig
+          if git fetch -q --depth 1 origin daten 2>/dev/null; then
+            git --work-tree=datenzweig checkout FETCH_HEAD -- . 2>/dev/null || true
+            git reset -q
+          fi
+
       - name: Messen und steuern
         run: python bote.py
         env:
@@ -60,6 +68,16 @@ jobs:
           NETHOME_PASSWORT: ${{ secrets.NETHOME_PASSWORT }}
           KALENDER_ICS: ${{ secrets.KALENDER_ICS }}
           ROBOROCK_EMAIL: ${{ secrets.ROBOROCK_EMAIL }}
+
+      - name: Datenzweig hochladen
+        if: always() && (inputs.aktion == '' || inputs.aktion == 'normal')
+        working-directory: datenzweig
+        run: |
+          ls *.enc >/dev/null 2>&1 || exit 0
+          git init -q -b daten
+          git add *.enc
+          git -c user.name=raumklima-bote -c user.email=actions@users.noreply.github.com commit -qm "Messdaten (verschlüsselt)"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" daten
 
       - name: Speicher sichern
         if: always() && (hashFiles('speicher/*') != '' || hashFiles('token.enc') != '')

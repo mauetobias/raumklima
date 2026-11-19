@@ -6,6 +6,8 @@ Google Home schaltet zusätzlich beim Öffnen eines Fensters aus.
 """
 import os
 
+import protokoll
+
 from midea_beautiful import appliance_state, connect_to_cloud
 from midea_beautiful.exceptions import CloudAuthenticationError
 
@@ -48,6 +50,8 @@ def schalten(regel, aktiv):
     cloud = _verbindung()
     geraet = appliance_state(cloud=cloud, use_cloud=True, appliance_id=_entfeuchter(cloud))
     s = geraet.state
+    protokoll.setzen(entfeuchter_an=bool(s.running), entfeuchter_ziel=s.target_humidity,
+                     entfeuchter_feuchte=s.current_humidity, entfeuchter_tank_voll=bool(getattr(s, "tank_full", False)))
     ziel = regel["ziel_beim_entfeuchten"]
     if aktiv is None:
         # In der Lücke: entfeuchtet er gerade auf unser Ziel, darf er weitermachen.
@@ -61,9 +65,11 @@ def schalten(regel, aktiv):
         if s.running and s.target_humidity == ziel and bool(s.sleep_mode) == leise:
             return "entfeuchtet bereits"
         # beep_prompt aus: der Comfee piept beim Umstellen nicht
+        protokoll.setzen(entfeuchter_an=True, entfeuchter_ziel=ziel)
         geraet.set_state(running=True, target_humidity=ziel, sleep_mode=leise, beep_prompt=False, cloud=cloud)
         return "entfeuchtet jetzt" + (" (leise)" if leise else "")
     if not s.running:
         return "ist aus"
+    protokoll.setzen(entfeuchter_an=False)
     geraet.set_state(running=False, beep_prompt=False, cloud=cloud)
     return "ausgeschaltet, Raum ist trocken genug"
