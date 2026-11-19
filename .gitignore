@@ -2,3 +2,6 @@ token.enc
 __pycache__/
 .env
 speicher/
+aufwach-app/app/release.jks
+aufwach-app/**/build/
+aufwach-app/.gradle/

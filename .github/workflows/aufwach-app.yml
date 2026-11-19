@@ -1,0 +1,44 @@
+name: Aufwach-App bauen
+
+on:
+  push:
+    branches: [main]
+    paths: ["aufwach-app/**", ".github/workflows/aufwach-app.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: aufwach-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Signierschlüssel entschlüsseln
+        run: |
+          pip install -q cryptography
+          python -c "import os;from cryptography.fernet import Fernet;open('app/release.jks','wb').write(Fernet(os.environ['K'].strip().encode()).decrypt(open('app/release.jks.enc','rb').read()))"
+        env:
+          K: ${{ secrets.TOKEN_SCHLUESSEL }}
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+      - run: gradle :app:assembleRelease --no-daemon
+      - run: cp app/build/outputs/apk/release/app-release.apk Aufwachen.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: aufwachen-${{ github.run_number }}
+          name: Aufwachen ${{ github.run_number }}
+          body: Aufwach-App, Version 1.${{ github.run_number }}
+          files: aufwach-app/Aufwachen.apk
+          make_latest: true
