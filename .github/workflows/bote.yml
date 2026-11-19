@@ -2,7 +2,7 @@ name: Raumklima-Bote  # läuft alle 5 Minuten
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "17 * * * *"   # nur Reserve: die Runde startet sich selbst neu
   workflow_dispatch:
     inputs:
       aktion:
@@ -25,7 +25,7 @@ concurrency:
 jobs:
   bote:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
 
@@ -47,17 +47,11 @@ jobs:
             speicher-
             netatmo-
 
-      - name: Datenzweig holen
-        run: |
-          mkdir -p datenzweig
-          if git fetch -q --depth 1 origin daten 2>/dev/null; then
-            git --work-tree=datenzweig checkout FETCH_HEAD -- . 2>/dev/null || true
-            git reset -q
-          fi
-
-      - name: Messen und steuern
-        run: python bote.py
+      - name: Messen und steuern, alle 5 Minuten für knapp eine Stunde
+        run: bash schleife.sh
         env:
+          GH_TOKEN: ${{ github.token }}
+          LAUFZEIT: "3300"
           AKTION: ${{ inputs.aktion }}
           CODE: ${{ inputs.code }}
           NETATMO_CLIENT_ID: ${{ secrets.NETATMO_CLIENT_ID }}
@@ -69,24 +63,11 @@ jobs:
           KALENDER_ICS: ${{ secrets.KALENDER_ICS }}
           ROBOROCK_EMAIL: ${{ secrets.ROBOROCK_EMAIL }}
 
-      - name: Datenzweig hochladen
+      - name: Nächste Runde starten
         if: always() && (inputs.aktion == '' || inputs.aktion == 'normal')
-        working-directory: datenzweig
-        run: |
-          ls *.enc >/dev/null 2>&1 || exit 0
-          git init -q -b daten
-          git add *.enc
-          git -c user.name=raumklima-bote -c user.email=actions@users.noreply.github.com commit -qm "Messdaten (verschlüsselt)"
-          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" daten
-
-      - name: Speicher sichern
-        if: always() && (hashFiles('speicher/*') != '' || hashFiles('token.enc') != '')
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            speicher
-            token.enc
-          key: speicher-${{ github.run_id }}
+        run: gh workflow run bote.yml --ref main -R "${{ github.repository }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   wachhalter:
     # verhindert, dass GitHub den Zeitplan nach 60 Tagen ohne Aktivität pausiert

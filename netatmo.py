@@ -40,9 +40,14 @@ def _access_token():
 
 
 def messwerte():
-    """Gibt die aktuellen Werte des (ersten) Home Coach zurück."""
-    r = requests.get(f"{API}/api/gethomecoachsdata",
-                     headers={"Authorization": f"Bearer {_access_token()}"}, timeout=30)
+    """Gibt die aktuellen Werte des (ersten) Home Coach zurück. Netatmo hakt gelegentlich, daher 3 Versuche."""
+    import time
+    token = _access_token()
+    for versuch in range(3):
+        r = requests.get(f"{API}/api/gethomecoachsdata", headers={"Authorization": f"Bearer {token}"}, timeout=30)
+        if r.status_code < 500:
+            break
+        time.sleep(15)
     r.raise_for_status()
     geraete = r.json()["body"]["devices"]
     if not geraete:
