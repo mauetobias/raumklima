@@ -37,3 +37,12 @@ geraete:
   #   messwert: co2            # der Home Coach misst CO2, aber keinen Feinstaub
   #   an_ueber: 1000
   #   aus_unter: 800
+
+# Aufgaben nach Zeit und Kalender (unabhängig vom Home Coach)
+aufgaben:
+  - name: Roborock
+    typ: roborock
+    ab: "10:00"                # frühestens
+    bis: "17:00"               # muss bis dahin fertig sein
+    dauer_minuten: 90          # so lange braucht eine Runde ungefähr
+    puffer_minuten: 15         # Abstand zum nächsten Termin

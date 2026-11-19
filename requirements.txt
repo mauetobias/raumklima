@@ -2,3 +2,6 @@ requests
 pyyaml
 cryptography
 midea-beautiful-air
+python-roborock
+icalendar
+recurring-ical-events

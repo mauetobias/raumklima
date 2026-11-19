@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
+    inputs:
+      aktion:
+        description: "Was soll der Bote tun?"
+        type: choice
+        default: normal
+        options: [normal, roborock_code_anfordern, roborock_code_eingeben]
+      code:
+        description: "Code aus der Roborock-Mail (nur bei roborock_code_eingeben)"
+        required: false
 
 permissions:
   contents: read
@@ -16,7 +25,7 @@ concurrency:
 jobs:
   bote:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
 
@@ -27,29 +36,39 @@ jobs:
 
       - run: pip install -q -r requirements.txt
 
-      - name: Letzten Netatmo-Token holen
+      - name: Speicher vom letzten Lauf holen
         uses: actions/cache/restore@v4
         with:
-          path: token.enc
-          key: netatmo-${{ github.run_id }}
-          restore-keys: netatmo-
+          path: |
+            speicher
+            token.enc
+          key: speicher-${{ github.run_id }}
+          restore-keys: |
+            speicher-
+            netatmo-
 
       - name: Messen und steuern
         run: python bote.py
         env:
+          AKTION: ${{ inputs.aktion }}
+          CODE: ${{ inputs.code }}
           NETATMO_CLIENT_ID: ${{ secrets.NETATMO_CLIENT_ID }}
           NETATMO_CLIENT_SECRET: ${{ secrets.NETATMO_CLIENT_SECRET }}
           NETATMO_REFRESH_TOKEN: ${{ secrets.NETATMO_REFRESH_TOKEN }}
           TOKEN_SCHLUESSEL: ${{ secrets.TOKEN_SCHLUESSEL }}
           NETHOME_EMAIL: ${{ secrets.NETHOME_EMAIL }}
           NETHOME_PASSWORT: ${{ secrets.NETHOME_PASSWORT }}
+          KALENDER_ICS: ${{ secrets.KALENDER_ICS }}
+          ROBOROCK_EMAIL: ${{ secrets.ROBOROCK_EMAIL }}
 
-      - name: Neuen Netatmo-Token sichern
-        if: always() && hashFiles('token.enc') != ''
+      - name: Speicher sichern
+        if: always() && (hashFiles('speicher/*') != '' || hashFiles('token.enc') != '')
         uses: actions/cache/save@v4
         with:
-          path: token.enc
-          key: netatmo-${{ github.run_id }}
+          path: |
+            speicher
+            token.enc
+          key: speicher-${{ github.run_id }}
 
   wachhalter:
     # verhindert, dass GitHub den Zeitplan nach 60 Tagen ohne Aktivität pausiert

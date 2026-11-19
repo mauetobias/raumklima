@@ -1,3 +1,4 @@
 token.enc
 __pycache__/
 .env
+speicher/

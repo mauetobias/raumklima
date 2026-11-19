@@ -1,37 +1,33 @@
 """Liest den Netatmo Home Coach aus.
 
-Netatmo tauscht den Refresh-Token bei jeder Erneuerung aus. Der jeweils aktuelle
-Token wird verschlüsselt in der Datei token.enc abgelegt, die der Workflow über den
-GitHub-Actions-Cache von Lauf zu Lauf weiterreicht. Der Schlüssel liegt nur in den
-Secrets. Fehlt die Datei, wird der Start-Token aus den Secrets genommen.
+Netatmo tauscht den Refresh-Token bei jeder Erneuerung aus. Der aktuelle Token liegt
+verschlüsselt im Speicher, beim allerersten Lauf wird der Start-Token aus den Secrets genommen.
 """
 import os
-from pathlib import Path
 
 import requests
-from cryptography.fernet import Fernet, InvalidToken
+
+import speicher
 
 API = "https://api.netatmo.com"
-TOKEN_DATEI = Path(os.environ.get("TOKEN_DATEI", "token.enc"))
 
 
-def _fernet():
-    return Fernet(os.environ["TOKEN_SCHLUESSEL"].strip().encode())
-
-
-def _refresh_token():
-    if TOKEN_DATEI.exists():
+def _alter_token():
+    """Übergang: frühere Version legte den Token in token.enc ab."""
+    from pathlib import Path
+    alt = Path("token.enc")
+    if alt.exists():
         try:
-            return _fernet().decrypt(TOKEN_DATEI.read_bytes()).decode()
-        except InvalidToken:
-            print("Gespeicherter Token unlesbar, nehme Start-Token.")
-    return os.environ["NETATMO_REFRESH_TOKEN"].strip()
+            return speicher._fernet().decrypt(alt.read_bytes()).decode()
+        except Exception:
+            return None
+    return None
 
 
 def _access_token():
     r = requests.post(f"{API}/oauth2/token", data={
         "grant_type": "refresh_token",
-        "refresh_token": _refresh_token(),
+        "refresh_token": speicher.lesen("netatmo") or _alter_token() or os.environ["NETATMO_REFRESH_TOKEN"].strip(),
         "client_id": os.environ["NETATMO_CLIENT_ID"].strip(),
         "client_secret": os.environ["NETATMO_CLIENT_SECRET"].strip(),
     }, timeout=30)
@@ -39,7 +35,7 @@ def _access_token():
         # nur der Fehlercode (z. B. invalid_grant), keine Geheimnisse
         raise RuntimeError(f"Netatmo-Anmeldung abgelehnt: {r.status_code} {r.json().get('error', '?')}")
     daten = r.json()
-    TOKEN_DATEI.write_bytes(_fernet().encrypt(daten["refresh_token"].encode()))
+    speicher.schreiben("netatmo", daten["refresh_token"])
     return daten["access_token"]
 
 
