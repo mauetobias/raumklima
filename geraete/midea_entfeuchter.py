@@ -29,10 +29,10 @@ def _entfeuchter(cloud):
 
 def schalten(regel, aktiv):
     """aktiv=True: entfeuchten, aktiv=False: Pause, None: nichts tun."""
-    if aktiv is None:
-        return "bleibt wie er ist"
     cloud = _verbindung()
     geraet = appliance_state(cloud=cloud, use_cloud=True, appliance_id=_entfeuchter(cloud))
+    if aktiv is None:
+        return "bleibt wie er ist (Verbindung ok)"
     ziel = regel["ziel_beim_entfeuchten"] if aktiv else regel["ziel_bei_pause"]
     leise = bool(regel.get("leise")) and aktiv
     if geraet.state.target_humidity == ziel and bool(geraet.state.sleep_mode) == leise:
