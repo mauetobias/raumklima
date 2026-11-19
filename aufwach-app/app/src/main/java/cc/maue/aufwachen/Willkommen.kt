@@ -17,8 +17,11 @@ import java.time.ZoneId
 import kotlin.math.*
 
 /**
- * „Willkommen zu Hause“: Ein Geofence um die Wohnung meldet, wenn das Handy ankommt (nur Ankommen, nicht Gehen).
- * Ist die Sonne schon untergegangen, startet die zweite Alexa-Routine (Licht an, Begrüßung).
+ * „Willkommen zu Hause“ in zwei Stufen:
+ *  1. Das Handy kommt in den Bereich um die Wohnung: nur „scharf“ für 20 Minuten, es passiert noch nichts.
+ *  2. Die Kamera an der Haustür sieht jemanden: Google Home schickt einen stillen Hinweis, die App fängt ihn ab
+ *     und startet, wenn scharf und schon dunkel, die Alexa-Routine (Licht an, Begrüßung).
+ * Wer im Flur stehen bleibt, löst also nichts aus. Erst wer durch die Tür kommt.
  */
 object Willkommen {
     private const val ID = "zuhause"
@@ -100,18 +103,26 @@ object Willkommen {
         }.start()
     }
 
+    private const val SCHARF_MS = 20 * 60_000L
+
+    fun scharf(c: Context) = System.currentTimeMillis() < Logik.prefs(c).getLong("scharf_bis", 0L)
+
+    /** Stufe 1: Handy nähert sich der Wohnung. */
     class Ankunft : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             val e = GeofencingEvent.fromIntent(i) ?: return
             if (e.hasError() || e.geofenceTransition != Geofence.GEOFENCE_TRANSITION_ENTER) return
-            val p = Logik.prefs(c)
-            val letzte = p.getLong("willkommen_zuletzt", 0L)
-            if (System.currentTimeMillis() - letzte < 2 * 3_600_000) return // höchstens alle 2 Stunden
-            if (nurAbends(c) && !istDunkel(c)) { Logik.protokoll(c, "Angekommen, aber noch hell: keine Begrüßung"); return }
-            p.edit().putLong("willkommen_zuletzt", System.currentTimeMillis()).apply()
-            val ende = goAsync()
-            ausloesen(c, "angekommen")
-            Thread { Thread.sleep(8000); ende.finish() }.start()
+            Logik.prefs(c).edit().putLong("scharf_bis", System.currentTimeMillis() + SCHARF_MS).apply()
+            Logik.protokoll(c, "Nähe Wohnung: Begrüßung 20 Min scharf")
         }
+    }
+
+    /** Stufe 2: Kamera hat jemanden gesehen (über den stillen Google-Home-Hinweis). */
+    fun kameraSahJemanden(c: Context) {
+        if (!aktiv(c)) return
+        if (!scharf(c)) { Logik.protokoll(c, "Kamera: Person, aber Handy nicht in der Nähe: nichts"); return }
+        if (nurAbends(c) && !istDunkel(c)) { Logik.protokoll(c, "Kamera: du, aber noch hell: nichts"); return }
+        Logik.prefs(c).edit().putLong("scharf_bis", 0L).apply()
+        ausloesen(c, "durch die Tür")
     }
 }

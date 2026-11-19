@@ -74,7 +74,7 @@ class MainActivity : Activity() {
         // Willkommen zu Hause
         spalte.addView(abstand(TextView(this).apply { text = "🏡 Willkommen zu Hause"; textSize = 22f; setTypeface(null, Typeface.BOLD) }, 28))
         spalte.addView(abstand(TextView(this).apply {
-            text = "Wenn du nach Hause kommst und es schon dunkel wird: Licht an Bett und Schreibtisch, Alexa begrüßt dich. Nur beim Ankommen, nicht beim Gehen."
+            text = "Ist dein Handy in der Nähe der Wohnung UND die Kamera an der Haustür sieht jemanden reinkommen, und es wird schon dunkel: Licht an Bett und Schreibtisch, Alexa begrüßt dich. Im Flur stehen bleiben löst nichts aus."
             setTextColor(Color.DKGRAY)
         }, 4))
         spalte.addView(abstand(titel("Link der Alexa-Routine „Willkommen“")))
@@ -99,6 +99,10 @@ class MainActivity : Activity() {
             }
         })
         spalte.addView(wStatus)
+        spalte.addView(Button(this).apply {
+            text = "Kamera-Hinweise erlauben (Benachrichtigungszugriff)"
+            setOnClickListener { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
+        })
         spalte.addView(abstand(Button(this).apply {
             text = "Begrüßung speichern"
             setOnClickListener {
@@ -116,6 +120,13 @@ class MainActivity : Activity() {
         spalte.addView(Button(this).apply {
             text = "Begrüßung jetzt testen"
             setOnClickListener { Willkommen.ausloesen(this@MainActivity, "Test"); Toast.makeText(this@MainActivity, "Gesendet", Toast.LENGTH_SHORT).show() }
+        })
+        spalte.addView(Button(this).apply {
+            text = "Ablauf testen: so tun, als käme ich gerade an"
+            setOnClickListener {
+                p.edit().putLong("scharf_bis", System.currentTimeMillis() + 20 * 60_000L).apply()
+                Toast.makeText(this@MainActivity, "Scharf für 20 Min. Jetzt einmal vor der Kamera durch die Tür gehen.", Toast.LENGTH_LONG).show()
+            }
         })
 
         spalte.addView(abstand(TextView(this).apply { text = "☀️ Aufwachen"; textSize = 22f; setTypeface(null, Typeface.BOLD) }, 28))
