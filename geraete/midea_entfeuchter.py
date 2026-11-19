@@ -16,17 +16,19 @@ def _verbindung():
     global _cloud
     if _cloud is None:
         letzter = None
-        for app in ("NetHome Plus", "MSmartHome"):
+        pw = os.environ["NETHOME_PASSWORT"]
+        versuche = [(app, p) for app in ("NetHome Plus", "MSmartHome") for p in dict.fromkeys([pw, pw.strip()])]
+        for app, p in versuche:
             try:
                 _cloud = connect_to_cloud(
-                    account=os.environ["NETHOME_EMAIL"].strip(),
-                    password=os.environ["NETHOME_PASSWORT"],
-                    appname=app,
-                )
+                    account=os.environ["NETHOME_EMAIL"].strip(), password=p, appname=app)
                 print(f"Midea-Anmeldung ok über {app}")
                 break
             except CloudAuthenticationError as e:
                 print(f"Midea-Anmeldung über {app} abgelehnt: {e.message} ({e.error_code})")
+                letzter = e
+            except Exception as e:
+                print(f"Midea-Anmeldung über {app} fehlgeschlagen: {type(e).__name__} {str(e)[:120]}")
                 letzter = e
         if _cloud is None:
             raise letzter
