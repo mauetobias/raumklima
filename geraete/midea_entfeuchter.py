@@ -1,6 +1,8 @@
 """Comfee/Midea-Luftentfeuchter über die NetHome-Plus-Cloud.
 
-Verstellt nur die Zielfeuchte. An und Aus bleiben bei Google Home (Fensterkontakte).
+Entfeuchten: einschalten und Zielfeuchte tief setzen, damit er durchzieht.
+Pause: ganz ausschalten, denn bei erreichter Zielfeuchte läuft sonst der Lüfter weiter.
+Google Home schaltet zusätzlich beim Öffnen eines Fensters aus.
 """
 import os
 
@@ -22,7 +24,6 @@ def _verbindung():
             try:
                 _cloud = connect_to_cloud(
                     account=os.environ["NETHOME_EMAIL"].strip(), password=p, appname=app)
-                print(f"Midea-Anmeldung ok über {app}")
                 break
             except CloudAuthenticationError as e:
                 print(f"Midea-Anmeldung über {app} abgelehnt: {e.message} ({e.error_code})")
@@ -43,15 +44,26 @@ def _entfeuchter(cloud):
 
 
 def schalten(regel, aktiv):
-    """aktiv=True: entfeuchten, aktiv=False: Pause, None: nichts tun."""
+    """aktiv=True: entfeuchten, aktiv=False: aus, None: in der Lücke."""
     cloud = _verbindung()
     geraet = appliance_state(cloud=cloud, use_cloud=True, appliance_id=_entfeuchter(cloud))
+    s = geraet.state
+    ziel = regel["ziel_beim_entfeuchten"]
     if aktiv is None:
-        return "bleibt wie er ist (Verbindung ok)"
-    ziel = regel["ziel_beim_entfeuchten"] if aktiv else regel["ziel_bei_pause"]
-    leise = bool(regel.get("leise")) and aktiv
-    if geraet.state.target_humidity == ziel and bool(geraet.state.sleep_mode) == leise:
-        return "schon richtig eingestellt"
-    # beep_prompt bleibt aus: der Comfee piept beim Umstellen nicht
-    geraet.set_state(target_humidity=ziel, sleep_mode=leise, beep_prompt=False, cloud=cloud)
-    return "entfeuchtet jetzt" if aktiv else "macht Pause"
+        # In der Lücke: entfeuchtet er gerade auf unser Ziel, darf er weitermachen.
+        # Läuft er mit einer anderen Einstellung (z. B. von Hand), ist das nicht unser Modus: aus.
+        if s.running and s.target_humidity != ziel:
+            aktiv = False
+        else:
+            return "bleibt wie er ist"
+    if aktiv:
+        leise = bool(regel.get("leise"))
+        if s.running and s.target_humidity == ziel and bool(s.sleep_mode) == leise:
+            return "entfeuchtet bereits"
+        # beep_prompt aus: der Comfee piept beim Umstellen nicht
+        geraet.set_state(running=True, target_humidity=ziel, sleep_mode=leise, beep_prompt=False, cloud=cloud)
+        return "entfeuchtet jetzt" + (" (leise)" if leise else "")
+    if not s.running:
+        return "ist aus"
+    geraet.set_state(running=False, beep_prompt=False, cloud=cloud)
+    return "ausgeschaltet, Raum ist trocken genug"

@@ -9,19 +9,16 @@ geraete:
   - name: Luftentfeuchter
     typ: midea_entfeuchter     # Comfee über NetHome Plus
     messwert: feuchte
-    an_ueber: 56               # Home Coach über 56 %  -> kräftig entfeuchten
-    aus_unter: 52              # Home Coach unter 52 % -> Pause
-    # Der Comfee wird nicht an- und ausgeschaltet (das macht Google Home
-    # mit den Fensterkontakten), sondern bekommt eine neue Zielfeuchte:
-    ziel_beim_entfeuchten: 35
-    ziel_bei_pause: 70
+    an_ueber: 58               # Home Coach über 58 %  -> einschalten und entfeuchten
+    aus_unter: 50              # Home Coach unter 50 % -> ganz aus (sonst läuft der Lüfter weiter)
+    ziel_beim_entfeuchten: 35  # tief, damit er durchzieht, bis der Home Coach "genug" sagt
     # Nachtruhe: nachts wird nur bei echter Schimmelgefahr eingegriffen, im leisen
     # Schlafmodus. Die Befehle gehen ohne Piepton raus.
     nachtruhe:
       von: "22:30"
       bis: "07:30"
       an_ueber: 62             # nachts erst ab 62 % entfeuchten
-      aus_unter: 56
+      aus_unter: 55
       leise: true
 
   # Vorlagen für später, einfach das # vorne entfernen und anpassen:
