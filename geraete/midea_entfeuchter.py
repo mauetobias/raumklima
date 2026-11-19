@@ -13,7 +13,7 @@ def _verbindung():
     global _cloud
     if _cloud is None:
         _cloud = connect_to_cloud(
-            account=os.environ["NETHOME_EMAIL"],
+            account=os.environ["NETHOME_EMAIL"].strip(),
             password=os.environ["NETHOME_PASSWORT"],
             appname=os.environ.get("MIDEA_APP", "NetHome Plus"),
         )

@@ -16,7 +16,7 @@ TOKEN_DATEI = Path(os.environ.get("TOKEN_DATEI", "token.enc"))
 
 
 def _fernet():
-    return Fernet(os.environ["TOKEN_SCHLUESSEL"].encode())
+    return Fernet(os.environ["TOKEN_SCHLUESSEL"].strip().encode())
 
 
 def _refresh_token():
@@ -25,17 +25,19 @@ def _refresh_token():
             return _fernet().decrypt(TOKEN_DATEI.read_bytes()).decode()
         except InvalidToken:
             print("Gespeicherter Token unlesbar, nehme Start-Token.")
-    return os.environ["NETATMO_REFRESH_TOKEN"]
+    return os.environ["NETATMO_REFRESH_TOKEN"].strip()
 
 
 def _access_token():
     r = requests.post(f"{API}/oauth2/token", data={
         "grant_type": "refresh_token",
         "refresh_token": _refresh_token(),
-        "client_id": os.environ["NETATMO_CLIENT_ID"],
-        "client_secret": os.environ["NETATMO_CLIENT_SECRET"],
+        "client_id": os.environ["NETATMO_CLIENT_ID"].strip(),
+        "client_secret": os.environ["NETATMO_CLIENT_SECRET"].strip(),
     }, timeout=30)
-    r.raise_for_status()
+    if not r.ok:
+        # nur der Fehlercode (z. B. invalid_grant), keine Geheimnisse
+        raise RuntimeError(f"Netatmo-Anmeldung abgelehnt: {r.status_code} {r.json().get('error', '?')}")
     daten = r.json()
     TOKEN_DATEI.write_bytes(_fernet().encrypt(daten["refresh_token"].encode()))
     return daten["access_token"]
