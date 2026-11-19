@@ -92,6 +92,7 @@ object Logik {
         else
             am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, ms, pi)
         waechterStarten(app)
+        Willkommen.registrieren(app)
     }
 
     fun waechterStarten(c: Context) {

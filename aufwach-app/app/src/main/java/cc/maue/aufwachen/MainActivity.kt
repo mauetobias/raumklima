@@ -71,6 +71,53 @@ class MainActivity : Activity() {
             }
         })
 
+        // Willkommen zu Hause
+        spalte.addView(abstand(TextView(this).apply { text = "🏡 Willkommen zu Hause"; textSize = 22f; setTypeface(null, Typeface.BOLD) }, 28))
+        spalte.addView(abstand(TextView(this).apply {
+            text = "Wenn du nach Hause kommst und es schon dunkel wird: Licht an Bett und Schreibtisch, Alexa begrüßt dich. Nur beim Ankommen, nicht beim Gehen."
+            setTextColor(Color.DKGRAY)
+        }, 4))
+        spalte.addView(abstand(titel("Link der Alexa-Routine „Willkommen“")))
+        val wUrl = EditText(this).apply { setText(p.getString("willkommen_url", "")); hint = "https://www.virtualsmarthome.xyz/url_routine_trigger/…"; inputType = InputType.TYPE_TEXT_VARIATION_URI }
+        spalte.addView(wUrl)
+        val wAktiv = CheckBox(this).apply { text = "Begrüßung einschalten"; isChecked = p.getBoolean("willkommen_aktiv", false) }
+        val wAbends = CheckBox(this).apply { text = "Nur wenn die Sonne schon untergeht"; isChecked = p.getBoolean("willkommen_abends", true) }
+        spalte.addView(wAktiv); spalte.addView(wAbends)
+        val wStatus = TextView(this).apply {
+            textSize = 13f; setTextColor(Color.DKGRAY)
+            text = Willkommen.zuhause(this@MainActivity)?.let { (la, lo) -> "Zuhause gesetzt · Sonnenuntergang heute ${Willkommen.sonnenuntergang(la, lo)}" } ?: "Zuhause noch nicht gesetzt"
+        }
+        spalte.addView(Button(this).apply {
+            text = "Ich bin gerade zu Hause: Standort merken"
+            setOnClickListener {
+                if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 7)
+                    Toast.makeText(this@MainActivity, "Standort erlauben, dann nochmal tippen", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
+                Willkommen.standortSetzen(this@MainActivity) { t -> runOnUiThread { wStatus.text = t; Toast.makeText(this@MainActivity, t, Toast.LENGTH_LONG).show() } }
+            }
+        })
+        spalte.addView(wStatus)
+        spalte.addView(abstand(Button(this).apply {
+            text = "Begrüßung speichern"
+            setOnClickListener {
+                p.edit().putString("willkommen_url", wUrl.text.toString().trim()).putBoolean("willkommen_aktiv", wAktiv.isChecked)
+                    .putBoolean("willkommen_abends", wAbends.isChecked).apply()
+                if (wAktiv.isChecked && Build.VERSION.SDK_INT >= 29 &&
+                    checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this@MainActivity, "Bitte bei Standort „Immer zulassen“ wählen, sonst merkt die App das Ankommen nicht", Toast.LENGTH_LONG).show()
+                    requestPermissions(arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), 8)
+                }
+                Willkommen.registrieren(this@MainActivity)
+                Toast.makeText(this@MainActivity, "Gespeichert", Toast.LENGTH_SHORT).show()
+            }
+        }, 8))
+        spalte.addView(Button(this).apply {
+            text = "Begrüßung jetzt testen"
+            setOnClickListener { Willkommen.ausloesen(this@MainActivity, "Test"); Toast.makeText(this@MainActivity, "Gesendet", Toast.LENGTH_SHORT).show() }
+        })
+
         spalte.addView(abstand(TextView(this).apply { text = "☀️ Aufwachen"; textSize = 22f; setTypeface(null, Typeface.BOLD) }, 28))
         spalte.addView(abstand(TextView(this).apply {
             text = "Startet morgens einmal deine Alexa-Routine: Licht am Bett und Schreibtisch, Musik auf den Echos."
