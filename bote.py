@@ -90,6 +90,14 @@ def main():
         print("Roborock:", roborock.code_eingeben(os.environ["CODE"]))
         return
 
+    if aktion == "kalender_test":
+        import kalender
+        from datetime import timedelta
+        jetzt = datetime.now(ZoneInfo("Europe/Berlin"))
+        print(f"Kalender: {len(kalender._laden())} geladen, nächste 24 h belegt: "
+              f"{kalender.belegt(jetzt, jetzt + timedelta(hours=24))}")
+        return
+
     fehlt = [n for n in PFLICHT if not os.environ.get(n, "").strip()]
     if fehlt:
         print("Fehlende oder leere Secrets: " + ", ".join(fehlt))

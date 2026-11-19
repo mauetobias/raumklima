@@ -9,7 +9,7 @@ on:
         description: "Was soll der Bote tun?"
         type: choice
         default: normal
-        options: [normal, roborock_code_anfordern, roborock_code_eingeben]
+        options: [normal, roborock_code_anfordern, roborock_code_eingeben, kalender_test]
       code:
         description: "Code aus der Roborock-Mail (nur bei roborock_code_eingeben)"
         required: false
