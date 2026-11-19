@@ -30,12 +30,12 @@ def _email():
 
 
 def code_anfordern():
-    asyncio.run(RoborockApiClient(_email()).request_code())
+    asyncio.run(RoborockApiClient(_email()).request_code_v4())
     return "Code wurde per E-Mail verschickt"
 
 
 def code_eingeben(code):
-    user_data = asyncio.run(RoborockApiClient(_email()).code_login(code.strip()))
+    user_data = asyncio.run(RoborockApiClient(_email()).code_login_v4(code.strip()))
     speicher.schreiben("roborock", json.dumps(user_data.as_dict()))
     return "Anmeldung gespeichert"
 
