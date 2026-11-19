@@ -1,5 +1,6 @@
 """Raumklima-Bote: Home Coach messen, Regeln prüfen, Geräte steuern."""
 import importlib
+import os
 import sys
 
 import yaml
@@ -24,7 +25,15 @@ def entscheidung(regel, wert):
     return None
 
 
+PFLICHT = ["NETATMO_CLIENT_ID", "NETATMO_CLIENT_SECRET", "NETATMO_REFRESH_TOKEN",
+           "TOKEN_SCHLUESSEL", "NETHOME_EMAIL", "NETHOME_PASSWORT"]
+
+
 def main():
+    fehlt = [n for n in PFLICHT if not os.environ.get(n, "").strip()]
+    if fehlt:
+        print("Fehlende oder leere Secrets: " + ", ".join(fehlt))
+        sys.exit(1)
     regeln = yaml.safe_load(open("regeln.yaml", encoding="utf-8"))["geraete"]
     werte = netatmo.messwerte()
     fehler = False
