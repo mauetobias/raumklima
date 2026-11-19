@@ -34,7 +34,9 @@ def schalten(regel, aktiv):
     cloud = _verbindung()
     geraet = appliance_state(cloud=cloud, use_cloud=True, appliance_id=_entfeuchter(cloud))
     ziel = regel["ziel_beim_entfeuchten"] if aktiv else regel["ziel_bei_pause"]
-    if geraet.state.target_humidity == ziel:
+    leise = bool(regel.get("leise")) and aktiv
+    if geraet.state.target_humidity == ziel and bool(geraet.state.sleep_mode) == leise:
         return "schon richtig eingestellt"
-    geraet.set_state(target_humidity=ziel, cloud=cloud)
+    # beep_prompt bleibt aus: der Comfee piept beim Umstellen nicht
+    geraet.set_state(target_humidity=ziel, sleep_mode=leise, beep_prompt=False, cloud=cloud)
     return "entfeuchtet jetzt" if aktiv else "macht Pause"

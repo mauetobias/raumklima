@@ -15,6 +15,14 @@ geraete:
     # mit den Fensterkontakten), sondern bekommt eine neue Zielfeuchte:
     ziel_beim_entfeuchten: 35
     ziel_bei_pause: 70
+    # Nachtruhe: nachts wird nur bei echter Schimmelgefahr eingegriffen, im leisen
+    # Schlafmodus. Die Befehle gehen ohne Piepton raus.
+    nachtruhe:
+      von: "22:30"
+      bis: "07:30"
+      an_ueber: 62             # nachts erst ab 62 % entfeuchten
+      aus_unter: 56
+      leise: true
 
   # Vorlagen für später, einfach das # vorne entfernen und anpassen:
   #
