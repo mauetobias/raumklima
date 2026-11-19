@@ -31,6 +31,25 @@ PFLICHT = ["NETATMO_CLIENT_ID", "NETATMO_CLIENT_SECRET", "NETATMO_REFRESH_TOKEN"
            "TOKEN_SCHLUESSEL", "NETHOME_EMAIL", "NETHOME_PASSWORT"]
 
 
+def _uhrzeit(text):
+    h, m = text.split(":")
+    return time(int(h), int(m))
+
+
+def nachts(nacht, jetzt=None):
+    jetzt = jetzt or datetime.now(ZoneInfo("Europe/Berlin")).time()
+    von, bis = _uhrzeit(nacht["von"]), _uhrzeit(nacht["bis"])
+    return jetzt >= von or jetzt < bis if von > bis else von <= jetzt < bis
+
+
+def aktive_regel(regel, jetzt=None):
+    """Nachts gelten die Werte aus 'nachtruhe' statt der Tageswerte."""
+    nacht = regel.get("nachtruhe")
+    if nacht and nachts(nacht, jetzt):
+        return {**regel, **{k: v for k, v in nacht.items() if k not in ("von", "bis")}, "nacht": True}
+    return {**regel, "nacht": False, "leise": False}
+
+
 def geraete_steuern(regeln):
     werte = netatmo.messwerte()
     fehler = False
@@ -44,7 +63,7 @@ def geraete_steuern(regeln):
             print(f"{regel['name']}: {ergebnis}")
         except Exception as e:  # ein Gerät darf die anderen nicht blockieren
             fehler = True
-            print(f"{regel['name']}: Fehler ({type(e).__name__})")
+            print(f"{regel['name']}: Fehler ({type(e).__name__}: {str(e)[:80]})")
     return fehler
 
 
