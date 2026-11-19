@@ -7,6 +7,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.os.Build
+import android.util.SizeF
 import android.widget.RemoteViews
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -52,7 +54,13 @@ class KlimaWidget : AppWidgetProvider() {
         fun holenUndZeigen(c: Context) {
             val v = try {
                 if (Daten.schluessel(c).isEmpty()) fehler(c, "Schlüssel in der App eintragen")
-                else ansicht(c, Daten.status(c))
+                else {
+                    val s = Daten.status(c)
+                    val gross = ansicht(c, s)
+                    if (Build.VERSION.SDK_INT >= 31)
+                        RemoteViews(mapOf(SizeF(40f, 40f) to schmal(c, s), SizeF(150f, 100f) to gross))
+                    else gross
+                }
             } catch (e: Exception) {
                 fehler(c, "Keine Daten (${e.message ?: e.javaClass.simpleName})")
             }
@@ -60,7 +68,30 @@ class KlimaWidget : AppWidgetProvider() {
             m.updateAppWidget(ComponentName(c, KlimaWidget::class.java), v)
         }
 
-        private fun basis(c: Context) = RemoteViews(c.packageName, R.layout.widget_klima).apply {
+        private fun farbeFeuchte(f: Int) = when {
+            f < 0 -> Color.WHITE
+            f > 62 -> Color.parseColor("#FF6B6B")
+            f > 58 -> Color.parseColor("#FFB347")
+            f < 40 -> Color.parseColor("#6EC6FF")
+            else -> Color.parseColor("#7CE38B")
+        }
+
+        private fun farbeCo2(x: Int) = when {
+            x < 0 -> Color.WHITE
+            x >= 1400 -> Color.parseColor("#FF6B6B")
+            x >= 1000 -> Color.parseColor("#FFB347")
+            else -> Color.parseColor("#7CE38B")
+        }
+
+        /** Eine Kachel breit: nur das Wichtigste untereinander. */
+        private fun schmal(c: Context, s: JSONObject) = basis(c, R.layout.widget_klima_schmal).apply {
+            val f = s.optInt("feuchte", -1); val co2 = s.optInt("co2", -1)
+            setTextViewText(R.id.w_feuchte, if (f >= 0) "$f%" else "–"); setTextColor(R.id.w_feuchte, farbeFeuchte(f))
+            setTextViewText(R.id.w_co2, if (co2 >= 0) "$co2" else "–"); setTextColor(R.id.w_co2, farbeCo2(co2))
+            setTextViewText(R.id.w_status, if (s.optBoolean("entfeuchter_an")) "💧an" else "")
+        }
+
+        private fun basis(c: Context, layout: Int = R.layout.widget_klima) = RemoteViews(c.packageName, layout).apply {
             val tippen = PendingIntent.getBroadcast(c, 0, Intent(c, KlimaWidget::class.java).setAction(AKTUALISIEREN),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             setOnClickPendingIntent(R.id.widget_wurzel, tippen)
@@ -72,20 +103,9 @@ class KlimaWidget : AppWidgetProvider() {
             val feuchte = s.optInt("feuchte", -1)
             val co2 = s.optInt("co2", -1)
             setTextViewText(R.id.w_feuchte, if (feuchte >= 0) "$feuchte %" else "–")
-            setTextColor(R.id.w_feuchte, when {
-                feuchte < 0 -> Color.WHITE
-                feuchte > 62 -> Color.parseColor("#FF6B6B")
-                feuchte > 58 -> Color.parseColor("#FFB347")
-                feuchte < 40 -> Color.parseColor("#6EC6FF")
-                else -> Color.parseColor("#7CE38B")
-            })
+            setTextColor(R.id.w_feuchte, farbeFeuchte(feuchte))
             setTextViewText(R.id.w_co2, if (co2 >= 0) "$co2 ppm" else "–")
-            setTextColor(R.id.w_co2, when {
-                co2 < 0 -> Color.WHITE
-                co2 >= 1400 -> Color.parseColor("#FF6B6B")
-                co2 >= 1000 -> Color.parseColor("#FFB347")
-                else -> Color.parseColor("#7CE38B")
-            })
+            setTextColor(R.id.w_co2, farbeCo2(co2))
             setTextViewText(R.id.w_temp, if (s.has("temperatur")) String.format("%.1f °C", s.getDouble("temperatur")).replace('.', ',') else "–")
             setTextViewText(R.id.w_laerm, if (s.has("laerm")) "${s.getInt("laerm")} dB" else "–")
             val an = s.optBoolean("entfeuchter_an", false)
