@@ -34,7 +34,32 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding((20 * dp).toInt(), (40 * dp).toInt(), (20 * dp).toInt(), (20 * dp).toInt())
         }
-        spalte.addView(TextView(this).apply { text = "☀️ Aufwachen"; textSize = 26f; setTypeface(null, Typeface.BOLD) })
+        spalte.addView(TextView(this).apply { text = "🏠 Raumklima"; textSize = 26f; setTypeface(null, Typeface.BOLD) })
+
+        // Raumklima: Schlüssel, Widget, Export
+        spalte.addView(abstand(titel("Schlüssel für die Messdaten")))
+        val schluessel = EditText(this).apply {
+            setText(p.getString("schluessel", "")); hint = "TOKEN_SCHLUESSEL aus dem Chat"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+        }
+        spalte.addView(schluessel)
+        spalte.addView(Button(this).apply {
+            text = "Schlüssel speichern und Widget aktualisieren"
+            setOnClickListener {
+                p.edit().putString("schluessel", schluessel.text.toString().trim()).apply()
+                KlimaWidget.planen(this@MainActivity); KlimaWidget.aktualisieren(this@MainActivity)
+                Toast.makeText(this@MainActivity, "Gespeichert. Widget lang drücken auf dem Homescreen → Widgets → Raumklima", Toast.LENGTH_LONG).show()
+            }
+        })
+        spalte.addView(Button(this).apply {
+            text = "Verlauf als CSV exportieren"
+            setOnClickListener {
+                startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("text/csv").putExtra(Intent.EXTRA_TITLE, "raumklima-${java.time.LocalDate.now()}.csv"), 42)
+            }
+        })
+
+        spalte.addView(abstand(TextView(this).apply { text = "☀️ Aufwachen"; textSize = 22f; setTypeface(null, Typeface.BOLD) }, 28))
         spalte.addView(abstand(TextView(this).apply {
             text = "Startet morgens einmal deine Alexa-Routine: Licht am Bett und Schreibtisch, Musik auf den Echos."
             setTextColor(Color.DKGRAY)
@@ -86,6 +111,22 @@ class MainActivity : Activity() {
 
         berechtigungen()
         Logik.planen(this)
+    }
+
+    @Deprecated("einfach gehalten")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        val ziel = data?.data
+        if (requestCode != 42 || resultCode != RESULT_OK || ziel == null) return
+        Toast.makeText(this, "Export läuft …", Toast.LENGTH_SHORT).show()
+        kotlin.concurrent.thread {
+            val text = try {
+                val csv = Daten.exportCsv(this)
+                contentResolver.openOutputStream(ziel)!!.use { it.write(csv.toByteArray()) }
+                "Export fertig: ${csv.lines().size - 2} Messungen"
+            } catch (e: Exception) { "Export fehlgeschlagen: ${e.message ?: e.javaClass.simpleName}" }
+            runOnUiThread { Toast.makeText(this, text, Toast.LENGTH_LONG).show() }
+        }
     }
 
     override fun onResume() { super.onResume(); zeigen() }

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_wurzel"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:background="@drawable/widget_hintergrund">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Luftfeuchte" android:textColor="#B0B8D0" android:textSize="11sp" />
+            <TextView android:id="@+id/w_feuchte" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="–" android:textColor="#FFFFFF" android:textSize="28sp" android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="CO₂" android:textColor="#B0B8D0" android:textSize="11sp" />
+            <TextView android:id="@+id/w_co2" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="–" android:textColor="#FFFFFF" android:textSize="20sp" android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:orientation="horizontal">
+        <TextView android:id="@+id/w_temp" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:text="–" android:textColor="#FFFFFF" android:textSize="14sp" />
+        <TextView android:id="@+id/w_laerm" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:text="–" android:textColor="#FFFFFF" android:textSize="14sp" />
+    </LinearLayout>
+
+    <TextView android:id="@+id/w_entfeuchter" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginTop="6dp" android:text="Entfeuchter: –" android:textColor="#FFFFFF" android:textSize="13sp" />
+
+    <TextView android:id="@+id/w_stand" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginTop="2dp" android:text="Lädt …" android:textColor="#8890A8" android:textSize="11sp" />
+</LinearLayout>

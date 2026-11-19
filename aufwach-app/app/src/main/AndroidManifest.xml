@@ -11,7 +11,7 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
-        android:label="Aufwachen"
+        android:label="Raumklima"
         android:icon="@drawable/ic_sonne"
         android:allowBackup="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
@@ -30,6 +30,13 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
+        </receiver>
+
+        <receiver android:name=".KlimaWidget" android:exported="true" android:label="Raumklima">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/klima_widget" />
         </receiver>
 
         <service
