@@ -17,6 +17,7 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.*
 import java.time.LocalTime
+import cc.maue.aufwachen.widget.KlimaWidget
 
 class MainActivity : Activity() {
     private lateinit var status: TextView
@@ -35,6 +36,17 @@ class MainActivity : Activity() {
             setPadding((20 * dp).toInt(), (40 * dp).toInt(), (20 * dp).toInt(), (20 * dp).toInt())
         }
         spalte.addView(TextView(this).apply { text = "🏠 Raumklima"; textSize = 26f; setTypeface(null, Typeface.BOLD) })
+        spalte.addView(TextView(this).apply { text = "Version ${Updater.installiertName(this@MainActivity)}"; setTextColor(Color.GRAY); textSize = 12f })
+        val updateKnopf = Button(this).apply { visibility = android.view.View.GONE }
+        spalte.addView(updateKnopf)
+        kotlin.concurrent.thread {
+            val info = Updater.pruefen(this)
+            if (info != null) runOnUiThread {
+                updateKnopf.text = "⬆ Update auf Version ${info.version} laden"
+                updateKnopf.visibility = android.view.View.VISIBLE
+                updateKnopf.setOnClickListener { Updater.oeffnen(this, info) }
+            }
+        }
 
         // Raumklima: Schlüssel, Widget, Export
         spalte.addView(abstand(titel("Schlüssel für die Messdaten")))
@@ -111,6 +123,8 @@ class MainActivity : Activity() {
 
         berechtigungen()
         Logik.planen(this)
+        Updater.planen(this)
+        KlimaWidget.planen(this)
     }
 
     @Deprecated("einfach gehalten")

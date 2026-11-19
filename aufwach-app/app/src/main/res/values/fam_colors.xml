@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget-Familie (siehe widget/Family.kt). Vor Android 12 feste Töne, ab Android 12 aus dem Hintergrundbild. -->
+<resources>
+    <color name="fam_surface">#FF30332B</color>
+    <color name="fam_card">#FF474B41</color>
+    <color name="fam_track">#FF5E6357</color>
+    <color name="fam_ink">#FFF2F1E6</color>
+    <color name="fam_muted">#FFC5C8B9</color>
+    <color name="fam_on_pill">#FF30332B</color>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget-Familie: Töne aus dem Hintergrundbild (Material You, accent2 wie beim Finanz-Widget). -->
+<resources>
+    <color name="fam_surface">@android:color/system_accent2_800</color>
+    <color name="fam_card">@android:color/system_accent2_700</color>
+    <color name="fam_track">@android:color/system_accent2_600</color>
+    <color name="fam_ink">@android:color/system_accent2_50</color>
+    <color name="fam_muted">@android:color/system_accent2_200</color>
+    <color name="fam_on_pill">@android:color/system_accent2_800</color>
+</resources>

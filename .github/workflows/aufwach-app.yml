@@ -1,4 +1,4 @@
-name: Aufwach-App bauen
+name: Raumklima-App bauen
 
 on:
   push:
@@ -34,11 +34,11 @@ jobs:
         with:
           gradle-version: "8.11.1"
       - run: gradle :app:assembleRelease --no-daemon
-      - run: cp app/build/outputs/apk/release/app-release.apk Aufwachen.apk
+      - run: cp app/build/outputs/apk/release/app-release.apk Raumklima.apk
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: aufwachen-${{ github.run_number }}
-          name: Aufwachen ${{ github.run_number }}
-          body: Aufwach-App, Version 1.${{ github.run_number }}
-          files: aufwach-app/Aufwachen.apk
+          tag_name: raumklima-${{ github.run_number }}
+          name: Raumklima 1.${{ github.run_number }}
+          body: ${{ github.event.head_commit.message }}
+          files: aufwach-app/Raumklima.apk
           make_latest: true
