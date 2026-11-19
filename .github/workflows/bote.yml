@@ -1,0 +1,60 @@
+name: Raumklima-Bote
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write   # nur für den Wachhalter
+
+concurrency:
+  group: bote
+  cancel-in-progress: false
+
+jobs:
+  bote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -q -r requirements.txt
+
+      - name: Letzten Netatmo-Token holen
+        uses: actions/cache/restore@v4
+        with:
+          path: token.enc
+          key: netatmo-${{ github.run_id }}
+          restore-keys: netatmo-
+
+      - name: Messen und steuern
+        run: python bote.py
+        env:
+          NETATMO_CLIENT_ID: ${{ secrets.NETATMO_CLIENT_ID }}
+          NETATMO_CLIENT_SECRET: ${{ secrets.NETATMO_CLIENT_SECRET }}
+          NETATMO_REFRESH_TOKEN: ${{ secrets.NETATMO_REFRESH_TOKEN }}
+          TOKEN_SCHLUESSEL: ${{ secrets.TOKEN_SCHLUESSEL }}
+          NETHOME_EMAIL: ${{ secrets.NETHOME_EMAIL }}
+          NETHOME_PASSWORT: ${{ secrets.NETHOME_PASSWORT }}
+
+      - name: Neuen Netatmo-Token sichern
+        if: always() && hashFiles('token.enc') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: token.enc
+          key: netatmo-${{ github.run_id }}
+
+  wachhalter:
+    # verhindert, dass GitHub den Zeitplan nach 60 Tagen ohne Aktivität pausiert
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: gautamkrishnar/keepalive-workflow@v2

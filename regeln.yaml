@@ -1,0 +1,31 @@
+# Raumklima-Regeln
+# Der Netatmo Home Coach ist der Messfühler für alle Geräte.
+# Mögliche Messwerte: feuchte (%), co2 (ppm), temperatur (°C), laerm (dB)
+#
+# Jede Regel hat eine Einschaltschwelle und eine Ausschaltschwelle.
+# Die Lücke dazwischen verhindert, dass ein Gerät ständig an und aus springt.
+
+geraete:
+  - name: Luftentfeuchter
+    typ: midea_entfeuchter     # Comfee über NetHome Plus
+    messwert: feuchte
+    an_ueber: 56               # Home Coach über 56 %  -> kräftig entfeuchten
+    aus_unter: 52              # Home Coach unter 52 % -> Pause
+    # Der Comfee wird nicht an- und ausgeschaltet (das macht Google Home
+    # mit den Fensterkontakten), sondern bekommt eine neue Zielfeuchte:
+    ziel_beim_entfeuchten: 35
+    ziel_bei_pause: 70
+
+  # Vorlagen für später, einfach das # vorne entfernen und anpassen:
+  #
+  # - name: Luftbefeuchter
+  #   typ: ...                 # kommt mit dem Gerät
+  #   messwert: feuchte
+  #   an_unter: 45             # zu trocken -> befeuchten
+  #   aus_ueber: 50
+  #
+  # - name: Luftfilter
+  #   typ: ...
+  #   messwert: co2            # der Home Coach misst CO2, aber keinen Feinstaub
+  #   an_ueber: 1000
+  #   aus_unter: 800

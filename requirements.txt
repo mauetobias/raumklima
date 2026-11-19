@@ -1,0 +1,4 @@
+requests
+pyyaml
+cryptography
+midea-beautiful-air
