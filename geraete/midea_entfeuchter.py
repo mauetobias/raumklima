@@ -5,18 +5,31 @@ Verstellt nur die Zielfeuchte. An und Aus bleiben bei Google Home (Fensterkontak
 import os
 
 from midea_beautiful import appliance_state, connect_to_cloud
+from midea_beautiful.exceptions import CloudAuthenticationError
 
 _cloud = None
 
 
 def _verbindung():
+    """Meldet sich an. NetHome-Plus-Konten laufen teils über die MSmartHome-Cloud,
+    deshalb werden beide versucht."""
     global _cloud
     if _cloud is None:
-        _cloud = connect_to_cloud(
-            account=os.environ["NETHOME_EMAIL"].strip(),
-            password=os.environ["NETHOME_PASSWORT"],
-            appname=os.environ.get("MIDEA_APP", "NetHome Plus"),
-        )
+        letzter = None
+        for app in ("NetHome Plus", "MSmartHome"):
+            try:
+                _cloud = connect_to_cloud(
+                    account=os.environ["NETHOME_EMAIL"].strip(),
+                    password=os.environ["NETHOME_PASSWORT"],
+                    appname=app,
+                )
+                print(f"Midea-Anmeldung ok über {app}")
+                break
+            except CloudAuthenticationError as e:
+                print(f"Midea-Anmeldung über {app} abgelehnt: {e.message} ({e.error_code})")
+                letzter = e
+        if _cloud is None:
+            raise letzter
     return _cloud
 
 
