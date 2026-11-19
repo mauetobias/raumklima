@@ -83,6 +83,10 @@ class MainActivity : Activity() {
         val wAktiv = CheckBox(this).apply { text = "Begrüßung einschalten"; isChecked = p.getBoolean("willkommen_aktiv", false) }
         val wAbends = CheckBox(this).apply { text = "Nur wenn die Sonne schon untergeht"; isChecked = p.getBoolean("willkommen_abends", true) }
         spalte.addView(wAktiv); spalte.addView(wAbends)
+        spalte.addView(abstand(titel("Radius um die Wohnung in Metern")))
+        val wRadius = EditText(this).apply { setText(p.getInt("willkommen_radius", 15).toString()); inputType = InputType.TYPE_CLASS_NUMBER; width = (90 * dp).toInt() }
+        spalte.addView(wRadius)
+        spalte.addView(TextView(this).apply { textSize = 12f; setTextColor(Color.DKGRAY); text = "Klein heißt genauer. Falls die Begrüßung mal ausbleibt, weil das Handy draußen ungenau ortet, hier auf 50 erhöhen." })
         val wStatus = TextView(this).apply {
             textSize = 13f; setTextColor(Color.DKGRAY)
             text = Willkommen.zuhause(this@MainActivity)?.let { (la, lo) -> "Zuhause gesetzt · Sonnenuntergang heute ${Willkommen.sonnenuntergang(la, lo)}" } ?: "Zuhause noch nicht gesetzt"
@@ -107,7 +111,8 @@ class MainActivity : Activity() {
             text = "Begrüßung speichern"
             setOnClickListener {
                 p.edit().putString("willkommen_url", wUrl.text.toString().trim()).putBoolean("willkommen_aktiv", wAktiv.isChecked)
-                    .putBoolean("willkommen_abends", wAbends.isChecked).apply()
+                    .putBoolean("willkommen_abends", wAbends.isChecked)
+                    .putInt("willkommen_radius", wRadius.text.toString().toIntOrNull() ?: 15).apply()
                 if (wAktiv.isChecked && Build.VERSION.SDK_INT >= 29 &&
                     checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                     Toast.makeText(this@MainActivity, "Bitte bei Standort „Immer zulassen“ wählen, sonst merkt die App das Ankommen nicht", Toast.LENGTH_LONG).show()

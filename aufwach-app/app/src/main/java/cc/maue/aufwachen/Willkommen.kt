@@ -25,7 +25,7 @@ import kotlin.math.*
  */
 object Willkommen {
     private const val ID = "zuhause"
-    private const val RADIUS = 150f
+    fun radius(c: Context) = Logik.prefs(c).getInt("willkommen_radius", 15).coerceIn(10, 1000)
 
     fun url(c: Context) = Logik.prefs(c).getString("willkommen_url", "")!!.trim()
     fun aktiv(c: Context) = Logik.prefs(c).getBoolean("willkommen_aktiv", false)
@@ -59,7 +59,7 @@ object Willkommen {
         client.removeGeofences(pending(app))
         val (lat, lon) = zuhause(app) ?: return
         if (!aktiv(app)) return
-        val fence = Geofence.Builder().setRequestId(ID).setCircularRegion(lat, lon, RADIUS)
+        val fence = Geofence.Builder().setRequestId(ID).setCircularRegion(lat, lon, radius(app).toFloat())
             .setExpirationDuration(Geofence.NEVER_EXPIRE).setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
             .setNotificationResponsiveness(60_000).build()
         val req = GeofencingRequest.Builder().setInitialTrigger(0).addGeofence(fence).build()
