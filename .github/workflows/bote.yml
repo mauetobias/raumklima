@@ -1,4 +1,4 @@
-name: Raumklima-Bote
+name: Raumklima-Bote  # läuft alle 5 Minuten
 
 on:
   schedule:
