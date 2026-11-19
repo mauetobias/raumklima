@@ -29,13 +29,24 @@ def _email():
     return os.environ["ROBOROCK_EMAIL"].strip()
 
 
+def _client():
+    """Roborock bindet den Mail-Code an eine Geräte-Kennung. Die muss beim Anfordern
+    und beim Eingeben gleich sein, deshalb wird sie fest aus dem Schlüssel abgeleitet."""
+    import base64
+    import hashlib
+    c = RoborockApiClient(_email())
+    roh = hashlib.sha256(("roborock" + os.environ["TOKEN_SCHLUESSEL"].strip()).encode()).digest()
+    c._device_identifier = base64.urlsafe_b64encode(roh[:16]).decode().rstrip("=")
+    return c
+
+
 def code_anfordern():
-    asyncio.run(RoborockApiClient(_email()).request_code_v4())
+    asyncio.run(_client().request_code_v4())
     return "Code wurde per E-Mail verschickt"
 
 
 def code_eingeben(code):
-    user_data = asyncio.run(RoborockApiClient(_email()).code_login_v4(code.strip()))
+    user_data = asyncio.run(_client().code_login_v4(code.strip()))
     speicher.schreiben("roborock", json.dumps(user_data.as_dict()))
     return "Anmeldung gespeichert"
 
