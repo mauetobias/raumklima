@@ -69,4 +69,9 @@ done
 # Dialog Zeitwahl
 adb shell am force-stop $P; adb shell am start -n $P/.MainActivity >/dev/null; sleep 6
 adb shell uiautomator dump /sdcard/ui.xml >/dev/null; adb pull /sdcard/ui.xml fotos/ui.xml >/dev/null
+# Widget in mehreren Größen
+adb shell appwidget grantbind --package $P --user 0
+for modus in yes; do adb shell cmd uimode night $modus; done
+adb shell am start -n $P/.WidgetVorschau >/dev/null; sleep 10
+adb exec-out screencap -p > fotos/widget.png
 ls -la fotos
