@@ -58,9 +58,12 @@ for modus in no yes; do
   adb shell am start -n $P/.MainActivity >/dev/null; sleep 8
   adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1; sleep 2
   name=$([ $modus = yes ] && echo dunkel || echo hell)
-  for i in 1 2 3 4; do
-    adb exec-out screencap -p > fotos/${name}-$i.png
-    adb shell input swipe 700 2400 700 900 800; sleep 2
+  for seite in 1 2 3; do
+    for i in 1 2 3; do
+      adb exec-out screencap -p > fotos/${name}-$seite-$i.png
+      adb shell input swipe 700 2300 700 900 800; sleep 2
+    done
+    adb shell input swipe 1300 1500 120 1500 300; sleep 3
   done
 done
 # Dialog Zeitwahl
