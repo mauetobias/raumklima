@@ -24,6 +24,12 @@ class KameraHorcher : NotificationListenerService() {
         if (istWecker(sbn)) { Logik.weckerKlingelt(applicationContext); return }
         if (!sbn.packageName.startsWith("com.google.android.apps.chromecast")) return
         val titel = sbn.notification.extras.getCharSequence("android.title")?.toString().orEmpty()
+        if (titel.contains("Raumklima-Status")) {
+            val text = sbn.notification.extras.getCharSequence("android.text")?.toString().orEmpty()
+            runCatching { cancelNotification(sbn.key) }
+            if (Haus.melden(applicationContext, text)) cc.maue.aufwachen.widget.KlimaWidget.aktualisieren(applicationContext)
+            return
+        }
         if (!titel.contains("Willkommen-Ausloeser")) return
         runCatching { cancelNotification(sbn.key) }
         Willkommen.kameraSahJemanden(applicationContext)

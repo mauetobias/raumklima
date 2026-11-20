@@ -39,6 +39,8 @@ object Ampel {
     val orange = Color(0xFFFFA726)
     val rot = Color(0xFFEF5350)
     val sonne = Color(0xFFFFB300)
+    val lampe = Color(0xFFFFC94D)
+    val himmel = Color(0xFF7CC4FF)
 }
 
 @Composable

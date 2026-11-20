@@ -80,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import cc.maue.aufwachen.BuildConfig
 import cc.maue.aufwachen.Daten
+import cc.maue.aufwachen.Haus
 import cc.maue.aufwachen.Logik
 import cc.maue.aufwachen.Updater
 import cc.maue.aufwachen.Willkommen
@@ -207,7 +208,7 @@ fun Startseite(tick: Int) {
                 }
             }
         }
-        item { KlimaKarte(klima, laedt) { laden() } }
+        item { KlimaKarte(klima, remember(stand, klima) { Haus.stand(c) }, laedt) { laden() } }
         if (offen.isNotEmpty()) item {
             Karte(Icons.Rounded.Shield, "Einrichtung", "Ein Tipp pro Punkt, dann läuft alles von allein", akzent = Ampel.orange) {
                 offen.forEach { Zeile(it.icon, it.titel, "Erlauben", beschreibung = it.text, onClick = it.los) }

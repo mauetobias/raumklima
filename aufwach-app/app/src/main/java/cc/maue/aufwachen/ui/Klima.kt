@@ -37,7 +37,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import cc.maue.aufwachen.Haus
 import cc.maue.aufwachen.widget.Klima
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.Window
 
 /** Grenzen aus regeln.yaml (Tag): ab 58 % an, unter 50 % aus. */
 private const val ZIEL_VON = 50
@@ -70,7 +73,7 @@ private fun feuchteSatz(f: Int?) = when {
 }
 
 @Composable
-fun KlimaKarte(k: Klima, laedt: Boolean, neuLaden: () -> Unit) {
+fun KlimaKarte(k: Klima, haus: Haus.Stand, laedt: Boolean, neuLaden: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -127,6 +130,15 @@ fun KlimaKarte(k: Klima, laedt: Boolean, neuLaden: () -> Unit) {
                 Kachel(if (k.nacht) Icons.Rounded.Bedtime else Icons.Rounded.GraphicEq, if (k.nacht) "Nachtruhe" else "Lärm",
                     k.laerm?.let { "$it" } ?: "··", "dB", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
             }
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                HausKachel(Icons.Rounded.Lightbulb, "Licht", haus.lichterBekannt > 0 && haus.lichterAn.isNotEmpty(), Ampel.lampe,
+                    when { haus.lichterBekannt == 0 -> "noch unbekannt"; haus.lichterAn.isEmpty() -> "alles aus"; else -> haus.lichterAn.joinToString(", ") },
+                    Modifier.weight(1f))
+                HausKachel(Icons.Rounded.Window, "Fenster", haus.fensterAuf.isNotEmpty(), Ampel.himmel,
+                    when { haus.fensterBekannt == 0 -> "noch unbekannt"; haus.fensterAuf.isEmpty() -> "alle zu"; else -> haus.fensterAuf.joinToString(", ") + " offen" },
+                    Modifier.weight(1f))
+            }
         }
     }
 }
@@ -168,6 +180,22 @@ private fun Kachel(icon: ImageVector, titel: String, wert: String, einheit: Stri
                 Text(wert, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
                 Text(" $einheit", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 3.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun HausKachel(icon: ImageVector, titel: String, an: Boolean, farbe: Color, text: String, modifier: Modifier) {
+    Surface(color = if (an) farbe.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceContainerHighest,
+        shape = RoundedCornerShape(20.dp), modifier = modifier) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = if (an) farbe else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text(titel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (an) FontWeight.Bold else FontWeight.Normal),
+                    maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
         }
     }

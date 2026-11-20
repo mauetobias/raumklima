@@ -8,6 +8,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.ColorFilter
+import androidx.glance.Image
+import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
+import cc.maue.aufwachen.Haus
+import cc.maue.aufwachen.R
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
@@ -150,12 +156,53 @@ private fun Wert(text: String, farbe: Color, groesse: Float) {
     Text(text, style = TextStyle(fontSize = groesse.sp, fontWeight = FontWeight.Bold, color = ColorProvider(farbe)), maxLines = 1)
 }
 
+private val GELB = Color(0xFFFFC94D)
+private val HIMMEL = Color(0xFF7CC4FF)
+
+/** Lampe gelb, wenn irgendein Licht an ist. Fenster himmelblau, wenn eins offen ist. */
+@Composable
+private fun HausSymbol(lampe: Boolean, an: Boolean, text: String?, groesse: androidx.compose.ui.unit.Dp = 18.dp) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Image(ImageProvider(if (lampe) R.drawable.ic_lampe else R.drawable.ic_fenster),
+            contentDescription = if (lampe) "Licht" else "Fenster", modifier = GlanceModifier.size(groesse),
+            colorFilter = ColorFilter.tint(if (an) ColorProvider(if (lampe) GELB else HIMMEL) else Fam.muted))
+        if (text != null) {
+            Spacer(GlanceModifier.width(4.dp))
+            Text(text, style = TextStyle(fontSize = 12.sp, color = if (an) Fam.ink else Fam.muted,
+                fontWeight = if (an) FontWeight.Bold else FontWeight.Normal), maxLines = 1)
+        }
+    }
+}
+
+private fun lichtText(h: Haus.Stand) = when {
+    h.lichterBekannt == 0 -> "?"
+    h.lichterAn.isEmpty() -> "aus"
+    h.lichterAn.size == 1 -> h.lichterAn.first()
+    else -> "${h.lichterAn.size} an"
+}
+private fun fensterText(h: Haus.Stand) = when {
+    h.fensterBekannt == 0 -> "?"
+    h.fensterAuf.isEmpty() -> "zu"
+    h.fensterAuf.size == 1 -> "offen"
+    else -> "${h.fensterAuf.size} offen"
+}
+
+@Composable
+private fun HausZeile(h: Haus.Stand, mitText: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        HausSymbol(true, h.lichterAn.isNotEmpty(), if (mitText) lichtText(h) else null)
+        Spacer(GlanceModifier.width(if (mitText) 12.dp else 6.dp))
+        HausSymbol(false, h.fensterAuf.isNotEmpty(), if (mitText) fensterText(h) else null)
+    }
+}
+
 @Composable
 fun KlimaInhalt(k: Klima) {
+    val h = Haus.stand(LocalContext.current)
     val size = LocalSize.current
-    val f = k.feuchte?.let { "$it %" } ?: "–"
-    val c = k.co2?.let { "$it ppm" } ?: "–"
-    val t = k.temperatur?.let { String.format("%.1f °C", it).replace('.', ',') } ?: "–"
+    val f = k.feuchte?.let { "$it %" } ?: "··"
+    val c = k.co2?.let { "$it ppm" } ?: "··"
+    val t = k.temperatur?.let { String.format("%.1f °C", it).replace('.', ',') } ?: "··"
     val geraet = when { k.tankVoll -> "Tank voll!"; k.entfeuchterAn -> if (k.nacht) "läuft leise" else "läuft"; else -> "aus" }
     val stand = when {
         k.fehler != null && k.stand.isEmpty() -> k.fehler
@@ -168,16 +215,20 @@ fun KlimaInhalt(k: Klima) {
         FamShell(actionRunCallback<Neuladen>()) {
             Column(GlanceModifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalAlignment = Alignment.CenterVertically) {
-                Wert(k.feuchte?.let { "$it%" } ?: "–", Farbe.feuchte(k.feuchte), if (size.height < 100.dp) 18f else 22f)
+                Wert(k.feuchte?.let { "$it%" } ?: "··", Farbe.feuchte(k.feuchte), if (size.height < 100.dp) 18f else 22f)
                 Text("Feuchte", style = TextStyle(fontSize = 10.sp, color = Fam.muted), maxLines = 1)
+                if (size.height >= 140.dp) {
+                    Spacer(GlanceModifier.height(6.dp))
+                    HausZeile(h, false)
+                }
                 if (size.height >= 100.dp) {
                     Spacer(GlanceModifier.height(6.dp))
-                    Wert(k.co2?.toString() ?: "–", Farbe.co2(k.co2), 15f)
+                    Wert(k.co2?.toString() ?: "··", Farbe.co2(k.co2), 15f)
                     Text("CO₂", style = TextStyle(fontSize = 10.sp, color = Fam.muted), maxLines = 1)
                 }
                 if (size.height >= 170.dp) {
                     Spacer(GlanceModifier.height(6.dp))
-                    Text(k.temperatur?.let { String.format("%.0f°", it) } ?: "–",
+                    Text(k.temperatur?.let { String.format("%.0f°", it) } ?: "··",
                         style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Fam.ink), maxLines = 1)
                     Text("Temp.", style = TextStyle(fontSize = 10.sp, color = Fam.muted), maxLines = 1)
                 }
@@ -199,7 +250,7 @@ fun KlimaInhalt(k: Klima) {
     FamShell(null) {
         // Ein bis zwei Reihen hoch: alles Wichtige in den Kopf
         if (Fam.oneRow(size)) {
-            FamHeader({ FamLogo("💧", 32.dp) }, "$f · $c", "Entfeuchter $geraet · $stand", trailing = { NeuladenKnopf() })
+            FamHeader({ FamLogo("💧", 32.dp) }, "$f · $c", "Licht ${lichtText(h)} · Fenster ${fensterText(h)} · $stand", trailing = { NeuladenKnopf() })
             return@FamShell
         }
         FamHeader({ FamLogo("🏠") }, "Raumklima", stand, trailing = { NeuladenKnopf() })
@@ -217,9 +268,14 @@ fun KlimaInhalt(k: Klima) {
             if (size.height >= 180.dp) {
                 FamLine("Temperatur", t, if (k.laerm != null) "${k.laerm} dB Lautstärke" else "")
                 FamLine("Entfeuchter", geraet.replaceFirstChar { it.uppercase() }, if (k.nacht) "Nachtruhe aktiv" else "")
+                Spacer(GlanceModifier.height(10.dp))
+                HausZeile(h, true)
             } else {
-                Text("$t · Entfeuchter $geraet", style = TextStyle(fontSize = 12.sp, color = Fam.muted), maxLines = 1,
-                    modifier = GlanceModifier.padding(top = 4.dp))
+                Row(GlanceModifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("$t · Entf. $geraet", style = TextStyle(fontSize = 12.sp, color = Fam.muted), maxLines = 1,
+                        modifier = GlanceModifier.defaultWeight())
+                    HausZeile(h, false)
+                }
             }
         }
     }

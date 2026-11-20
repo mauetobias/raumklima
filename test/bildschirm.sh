@@ -33,6 +33,18 @@ adb push /tmp/a.xml /data/local/tmp/a.xml >/dev/null
 adb shell chmod 644 /data/local/tmp/a.xml
 adb shell run-as $P mkdir -p shared_prefs
 adb shell run-as $P cp /data/local/tmp/a.xml shared_prefs/aufwachen.xml
+cat > /tmp/h.xml <<X
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <boolean name="licht|Bett" value="true" />
+    <boolean name="licht|Schreibtisch" value="false" />
+    <boolean name="fenster|Wohnzimmer" value="false" />
+    <boolean name="fenster|Schlafzimmer" value="false" />
+</map>
+X
+adb push /tmp/h.xml /data/local/tmp/h.xml >/dev/null
+adb shell chmod 644 /data/local/tmp/h.xml
+adb shell run-as $P cp /data/local/tmp/h.xml shared_prefs/haus.xml
 adb shell settings put system screen_off_timeout 600000
 # Der Launcher des Emulators hängt gern beim Start und zeigt dann einen Fehlerdialog über allem
 adb shell pm disable-user --user 0 com.google.android.apps.nexuslauncher >/dev/null 2>&1
