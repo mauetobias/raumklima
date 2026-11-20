@@ -184,6 +184,10 @@ fun Startseite(tick: Int) {
             if (c.packageName !in NotificationManagerCompat.getEnabledListenerPackages(c))
                 add(Offen(Icons.Rounded.NotificationsActive, "Benachrichtigungszugriff", "Damit die App sieht, ob dein Wecker noch klingelt oder schlummert, und den Hinweis der Kamera erkennt") {
                     c.oeffnen(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) })
+            val leser = Settings.Secure.getString(c.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
+            if (!leser.contains("${c.packageName}/") )
+                add(Offen(Icons.Rounded.Videocam, "Kamera und Entfeuchter erkennen", "Bedienungshilfe „Raumklima“ einschalten. Sie liest nur in der Google-Home-App mit, ob Kamera und Entfeuchter an sind.") {
+                    c.oeffnen(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) })
             if (!c.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(c.packageName))
                 add(Offen(Icons.Rounded.BatteryChargingFull, "Akku nicht einschränken", "Sonst schläft die App morgens, wenn sie gebraucht wird. Raumklima auf „Nicht optimieren“ stellen.") {
                     c.oeffnen(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) })

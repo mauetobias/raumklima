@@ -1,3 +1,4 @@
 <resources>
     <string name="widget_beschreibung">Luftfeuchte, CO₂, Temperatur und Entfeuchter auf einen Blick</string>
+    <string name="leser_beschreibung">Liest nur in der Google-Home-App und in NetHome Plus, ob Kamera und Luftentfeuchter an oder aus sind, damit das Raumklima-Widget es sofort zeigt. Es wird nichts gespeichert oder übertragen.</string>
 </resources>

@@ -107,12 +107,22 @@ async def _zustand_holen():
 
 
 def zustand():
-    """Akku und Zustand für die App. Höchstens 75 Sekunden, sonst gilt der Sauger als nicht erreichbar."""
+    """Akku und Zustand für die App. Die Abfrage dauert, deshalb nur alle 5 Minuten,
+    dazwischen wird der letzte Stand wiederverwendet. Höchstens 75 Sekunden."""
+    import time as _t
     heute = datetime.now(BERLIN).date().isoformat()
     try:
-        aus = asyncio.run(asyncio.wait_for(_zustand_holen(), 75))
-    except Exception as e:
-        aus = {"roborock_zustand": "nicht erreichbar", "roborock_fehler": type(e).__name__}
+        alt = json.loads(speicher.lesen("roborock_zustand") or "{}")
+    except Exception:
+        alt = {}
+    if alt and _t.time() - alt.get("_zeit", 0) < 300:
+        aus = {k: v for k, v in alt.items() if k != "_zeit"}
+    else:
+        try:
+            aus = asyncio.run(asyncio.wait_for(_zustand_holen(), 75))
+        except Exception as e:
+            aus = {"roborock_zustand": "nicht erreichbar", "roborock_fehler": type(e).__name__}
+        speicher.schreiben("roborock_zustand", json.dumps({**aus, "_zeit": _t.time()}))
     # Ist er heute schon gefahren (auch von Hand), zählt das als Tagesrunde
     letzte = aus.get("roborock_letzte_runde", "")
     if letzte.startswith(heute) and aus.get("roborock_letzte_dauer", 0) >= 10:
