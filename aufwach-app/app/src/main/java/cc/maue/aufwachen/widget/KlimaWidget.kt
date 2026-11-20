@@ -308,28 +308,37 @@ fun KlimaInhalt(k: Klima) {
         // Ein bis zwei Reihen hoch: alles Wichtige in den Kopf
         if (Fam.oneRow(size)) {
             FamHeader({ FamLogo("💧", 32.dp) }, "$f · $c", stand, trailing = { NeuladenKnopf() })
-            Spacer(GlanceModifier.height(4.dp))
-            HausZeile(h, k, false)
+            Spacer(GlanceModifier.height(6.dp))
+            StatusLeiste(h, k, mitText = false)
             return@FamShell
         }
         FamHeader({ FamLogo("🏠") }, "Raumklima", stand, trailing = { NeuladenKnopf() })
         FamCard {
-            // Spaltenbreite bestimmt die Schriftgröße, damit nie etwas abgeschnitten wird
-            val spalte = (size.width - 48.dp) / 2
+            val breit = size.width >= 300.dp
+            val spalte = if (breit) (size.width - 48.dp) / 4 else (size.width - 48.dp) / 2
+            val kurz = spalte < 80.dp
             val gross = if (spalte >= 80.dp) 28f else if (spalte >= 62.dp) 24f else 20f
-            Row(GlanceModifier.fillMaxWidth()) {
-                Messwert("Luftfeuchte", k.feuchte?.let { "$it %" } ?: "··", ColorProvider(Farbe.feuchte(k.feuchte)), gross, GlanceModifier.defaultWeight())
-                Messwert("CO₂ in ppm", k.co2?.toString() ?: "··", ColorProvider(Farbe.co2(k.co2)), gross, GlanceModifier.defaultWeight())
-            }
-            if (size.height >= 200.dp) {
-                Spacer(GlanceModifier.height(8.dp))
+            val feuchte = @Composable { m: GlanceModifier -> Messwert(if (kurz) "Feuchte" else "Luftfeuchte", k.feuchte?.let { "$it %" } ?: "··", ColorProvider(Farbe.feuchte(k.feuchte)), gross, m) }
+            val co2 = @Composable { m: GlanceModifier -> Messwert(if (kurz) "CO₂ ppm" else "CO₂ in ppm", k.co2?.toString() ?: "··", ColorProvider(Farbe.co2(k.co2)), gross, m) }
+            val temp = @Composable { m: GlanceModifier, g: Float -> Messwert(if (kurz) "Temp." else "Temperatur", k.temperatur?.let { String.format("%.1f°", it).replace('.', ',') } ?: "··", Fam.ink, g, m) }
+            val laerm = @Composable { m: GlanceModifier, g: Float -> Messwert(if (kurz) "Lärm dB" else "Lärm in dB", k.laerm?.toString() ?: "··", Fam.ink, g, m) }
+            if (breit) {
+                // Breit: alle vier Werte in einer Reihe, darunter die Symbole mit Text
                 Row(GlanceModifier.fillMaxWidth()) {
-                    Messwert("Temperatur", k.temperatur?.let { String.format("%.1f°", it).replace('.', ',') } ?: "··", Fam.ink, gross * 0.7f, GlanceModifier.defaultWeight())
-                    Messwert("Lärm in dB", k.laerm?.toString() ?: "··", Fam.ink, gross * 0.7f, GlanceModifier.defaultWeight())
+                    feuchte(GlanceModifier.defaultWeight()); co2(GlanceModifier.defaultWeight())
+                    temp(GlanceModifier.defaultWeight(), gross); laerm(GlanceModifier.defaultWeight(), gross)
                 }
+                Spacer(GlanceModifier.defaultWeight())
+                StatusLeiste(h, k, mitText = size.height >= 150.dp)
+            } else {
+                Row(GlanceModifier.fillMaxWidth()) { feuchte(GlanceModifier.defaultWeight()); co2(GlanceModifier.defaultWeight()) }
+                Spacer(GlanceModifier.defaultWeight())
+                if (size.height >= 200.dp) {
+                    Row(GlanceModifier.fillMaxWidth()) { temp(GlanceModifier.defaultWeight(), gross * 0.75f); laerm(GlanceModifier.defaultWeight(), gross * 0.75f) }
+                    Spacer(GlanceModifier.defaultWeight())
+                }
+                StatusLeiste(h, k, mitText = size.height >= 200.dp)
             }
-            Spacer(GlanceModifier.defaultWeight())
-            StatusLeiste(h, k, mitText = size.height >= 200.dp)
         }
     }
 }
