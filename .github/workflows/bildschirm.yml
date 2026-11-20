@@ -6,6 +6,9 @@ on:
     branches: [main]
     paths: ["aufwach-app/**", "test/bildschirm.sh", ".github/workflows/bildschirm.yml"]
 
+permissions:
+  contents: write
+
 jobs:
   fotos:
     runs-on: ubuntu-latest
@@ -35,8 +38,9 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: bash test/bildschirm.sh
-      - uses: actions/upload-artifact@v4
-        with:
-          name: fotos
-          path: fotos
-          retention-days: 3
+      - name: Fotos in den Zweig "fotos" legen
+        run: |
+          cd fotos && rm -f ui.xml
+          git init -q -b fotos && git add -A
+          git -c user.name=bot -c user.email=bot@users.noreply.github.com commit -qm "Bildschirmfotos"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" fotos

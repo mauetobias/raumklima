@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3A3E34"/><stop offset="1" stop-color="#23251F"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="500" fill="url(#g)"/>
+  <circle cx="860" cy="120" r="210" fill="#FFB300" opacity="0.07"/>
+  <g transform="translate(70,120) scale(2.4)">
+    <rect width="108" height="108" rx="30" fill="#30332B"/>
+    <path fill="#F2F1E6" d="M52,27C52,27 34,47 34,61A18,18 0,0 0,70 61C70,47 52,27 52,27Z"/>
+    <path d="M41,63q5.5,-4.5 11,0t11,0" stroke="#30332B" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+    <circle cx="72" cy="38" r="7" fill="#FFB300"/>
+  </g>
+  <text x="380" y="215" font-family="Inter Display, Inter, Roboto" font-weight="700" font-size="76" fill="#F2F1E6">Raumklima</text>
+  <text x="383" y="275" font-family="Inter, Roboto" font-weight="500" font-size="26" fill="#C5C8B9">Gute Luft. Sanft wach. Willkommen daheim.</text>
+  <g font-family="Inter, Roboto" font-weight="600" font-size="22">
+    <rect x="383" y="315" rx="20" width="180" height="40" fill="#474B41"/><text x="473" y="342" text-anchor="middle" fill="#9CCC65">54 % Feuchte</text>
+    <rect x="577" y="315" rx="20" width="130" height="40" fill="#474B41"/><text x="642" y="342" text-anchor="middle" fill="#F2F1E6">742 ppm</text>
+    <rect x="721" y="315" rx="20" width="120" height="40" fill="#474B41"/><text x="781" y="342" text-anchor="middle" fill="#FFB300">21,4 °C</text>
+  </g>
+</svg>
