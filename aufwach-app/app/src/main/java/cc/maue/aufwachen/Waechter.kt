@@ -23,7 +23,9 @@ class Waechter : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private val entsperrt = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
-            if (Logik.imFenster(c)) Logik.aufwachen(c, "Entsperren") { stopSelf() }
+            if (!Logik.imFenster(c)) return
+            if (!Logik.entsperrenErlaubt(c)) { Logik.protokoll(c, "Entsperrt, aber Wecker läuft noch oder kommt noch: nichts"); return }
+            Logik.aufwachen(c, "Entsperren") { stopSelf() }
         }
     }
 

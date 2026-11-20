@@ -62,17 +62,38 @@ object Logik {
         prefs(c).edit().putString("protokoll", (listOf(zeile) + alt).joinToString("\n")).apply()
     }
 
-    /** Merkt sich den nächsten Wecker. Ändert er sich, prüfen wir, ob gerade einer ausgeschaltet wurde. */
+    /** Merkt sich den nächsten Wecker. Ausgelöst wird hier nichts mehr: Beim Klingeln springt Android schon weiter. */
     fun weckerGeaendert(c: Context) {
         val am = c.getSystemService(AlarmManager::class.java)
-        val neu = am.nextAlarmClock?.triggerTime ?: 0L
-        val alt = prefs(c).getLong("naechster_wecker", 0L)
-        prefs(c).edit().putLong("naechster_wecker", neu).apply()
+        prefs(c).edit().putLong("naechster_wecker", am.nextAlarmClock?.triggerTime ?: 0L).apply()
+    }
+
+    fun weckerKlingelt(c: Context) {
+        val p = prefs(c)
+        if (System.currentTimeMillis() - p.getLong("klingelte", 0L) > 30 * 60_000) protokoll(c, "Wecker klingelt, warte aufs Ausschalten")
+        p.edit().putLong("klingelte", System.currentTimeMillis()).apply()
+    }
+
+    /** Ein Wecker-Hinweis ist verschwunden. Wenn nichts mehr klingelt oder schlummert: Routine starten. */
+    fun weckerVielleichtAus(c: Context) {
+        if (!nachWecker(c) || !LocalTime.now().isBefore(LocalTime.of(13, 0))) return
+        if (KameraHorcher.weckerAktiv() == true) { protokoll(c, "Wecker schlummert, warte weiter"); return }
+        val naechster = c.getSystemService(AlarmManager::class.java).nextAlarmClock?.triggerTime ?: 0L
+        if (naechster in 1..(System.currentTimeMillis() + 20 * 60_000)) { protokoll(c, "Wecker schlummert, warte weiter"); return }
+        aufwachen(c, "Wecker aus")
+    }
+
+    /** Darf das Entsperren die Routine starten? Nicht, solange ein Wecker klingelt, schlummert oder heute früh noch kommt. */
+    fun entsperrenErlaubt(c: Context): Boolean {
+        if (KameraHorcher.weckerAktiv() == true) return false
         val jetzt = System.currentTimeMillis()
-        val vorbei = alt in 1..(jetzt + 60_000) && jetzt - alt < 3 * 3_600_000
-        val schlummern = neu in 1..(jetzt + 20 * 60_000) // neuer Wecker in < 20 Min = Schlummern
-        val morgens = LocalTime.now().isBefore(LocalTime.of(13, 0))
-        if (nachWecker(c) && vorbei && !schlummern && morgens) aufwachen(c, "Wecker")
+        if (jetzt - prefs(c).getLong("klingelte", 0L) < 2 * 60_000) return false
+        val naechster = c.getSystemService(AlarmManager::class.java).nextAlarmClock?.triggerTime ?: 0L
+        if (naechster > jetzt) {
+            val zeit = java.time.Instant.ofEpochMilli(naechster).atZone(java.time.ZoneId.systemDefault())
+            if (zeit.toLocalDate() == LocalDate.now() && zeit.toLocalTime().isBefore(bis(c))) return false
+        }
+        return true
     }
 
     /** Plant den Start des Wächters für den nächsten Morgen und startet ihn sofort, falls wir im Fenster sind. */

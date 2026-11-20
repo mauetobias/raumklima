@@ -104,7 +104,7 @@ class MainActivity : Activity() {
         })
         spalte.addView(wStatus)
         spalte.addView(Button(this).apply {
-            text = "Kamera-Hinweise erlauben (Benachrichtigungszugriff)"
+            text = "Benachrichtigungszugriff erlauben (Kamera und Wecker)"
             setOnClickListener { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
         })
         spalte.addView(abstand(Button(this).apply {
