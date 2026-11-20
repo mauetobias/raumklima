@@ -54,12 +54,11 @@ def schalten(regel, aktiv):
                      entfeuchter_feuchte=s.current_humidity, entfeuchter_tank_voll=bool(getattr(s, "tank_full", False)))
     ziel = regel["ziel_beim_entfeuchten"]
     if aktiv is None:
-        # In der Lücke: entfeuchtet er gerade auf unser Ziel, darf er weitermachen.
-        # Läuft er mit einer anderen Einstellung (z. B. von Hand), ist das nicht unser Modus: aus.
+        # In der Lücke: nichts anfassen. Hat Tobias ihn von Hand angemacht, bleibt er an,
+        # bis der Raum trocken genug ist (dann greift die Ausschaltschwelle).
         if s.running and s.target_humidity != ziel:
-            aktiv = False
-        else:
-            return "bleibt wie er ist"
+            return "läuft von Hand, bleibt an"
+        return "bleibt wie er ist"
     if aktiv:
         leise = bool(regel.get("leise"))
         if s.running and s.target_humidity == ziel and bool(s.sleep_mode) == leise:

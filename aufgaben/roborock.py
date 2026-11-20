@@ -104,10 +104,10 @@ async def _zustand_holen():
 
 
 def zustand():
-    """Akku und Zustand für die App. Höchstens 25 Sekunden, sonst gilt der Sauger als nicht erreichbar."""
+    """Akku und Zustand für die App. Höchstens 75 Sekunden, sonst gilt der Sauger als nicht erreichbar."""
     heute = datetime.now(BERLIN).date().isoformat()
     try:
-        aus = asyncio.run(asyncio.wait_for(_zustand_holen(), 25))
+        aus = asyncio.run(asyncio.wait_for(_zustand_holen(), 75))
     except Exception as e:
         aus = {"roborock_zustand": "nicht erreichbar", "roborock_fehler": type(e).__name__}
     aus["roborock_heute"] = speicher.lesen("roborock_zuletzt") == heute
