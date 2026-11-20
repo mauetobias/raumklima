@@ -78,7 +78,7 @@ def aufgaben_erledigen(aufgaben):
             ergebnis = modul.ausfuehren(aufgabe)
             print(f"{aufgabe['name']}: {ergebnis}")
             if aufgabe["typ"] == "roborock":
-                protokoll.setzen(roborock=ergebnis)
+                protokoll.setzen(roborock=ergebnis, **modul.zustand())
         except Exception as e:
             fehler = True
             print(f"{aufgabe['name']}: Fehler ({type(e).__name__}: {str(e)[:80]})")
@@ -109,6 +109,7 @@ def main():
         print("Fehlende oder leere Secrets: " + ", ".join(fehlt))
         sys.exit(1)
     regeln = yaml.safe_load(open("regeln.yaml", encoding="utf-8"))
+    protokoll.setzen(regeln=regeln)  # nur im Status, damit die App die Schwellen zeigen kann
     fehler = False
     try:
         fehler |= geraete_steuern(regeln.get("geraete", []))

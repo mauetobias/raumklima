@@ -66,6 +66,54 @@ async def _starten():
         await manager.close()
 
 
+DEUTSCH = {
+    "charging": "lädt", "charging_complete": "voll geladen", "idle": "bereit", "cleaning": "saugt",
+    "segment_cleaning": "saugt Räume", "zoned_cleaning": "saugt Bereich", "spot_cleaning": "saugt Stelle",
+    "returning_home": "fährt zur Station", "docking": "dockt an", "paused": "pausiert", "error": "Fehler",
+    "charger_disconnected": "nicht an der Station", "emptying_the_bin": "leert Behälter", "starting": "startet",
+    "updating": "Update", "sleeping": "schläft", "shutting_down": "schaltet aus",
+}
+
+
+async def _zustand_holen():
+    daten = speicher.lesen("roborock")
+    if not daten:
+        return {"roborock_zustand": "nicht angemeldet"}
+    params = UserParams(username=_email(), user_data=UserData.from_dict(json.loads(daten)))
+    manager = await create_device_manager(params)
+    try:
+        sauger = [g for g in await manager.get_devices() if g.v1_properties is not None]
+        if not sauger:
+            return {"roborock_zustand": "kein Sauger gefunden"}
+        p = sauger[0].v1_properties
+        await p.status.refresh()
+        name = getattr(p.status, "state_name", None) or (p.status.state.name if p.status.state else "")
+        aus = {"roborock_akku": p.status.battery, "roborock_zustand": DEUTSCH.get(name, name or "unbekannt")}
+        try:
+            await p.clean_summary.refresh()
+            r = getattr(p.clean_summary, "last_clean_record", None)
+            if r and r.begin:
+                aus["roborock_letzte_runde"] = datetime.fromtimestamp(r.begin, BERLIN).isoformat(timespec="minutes")
+                aus["roborock_letzte_dauer"] = round((r.duration or 0) / 60)
+                aus["roborock_letzte_flaeche"] = round((r.area or 0) / 1_000_000, 1)
+        except Exception:
+            pass
+        return aus
+    finally:
+        await manager.close()
+
+
+def zustand():
+    """Akku und Zustand für die App. Höchstens 25 Sekunden, sonst gilt der Sauger als nicht erreichbar."""
+    heute = datetime.now(BERLIN).date().isoformat()
+    try:
+        aus = asyncio.run(asyncio.wait_for(_zustand_holen(), 25))
+    except Exception as e:
+        aus = {"roborock_zustand": "nicht erreichbar", "roborock_fehler": type(e).__name__}
+    aus["roborock_heute"] = speicher.lesen("roborock_zuletzt") == heute
+    return aus
+
+
 def ausfuehren(aufgabe, jetzt=None):
     jetzt = jetzt or datetime.now(BERLIN)
     heute = jetzt.date().isoformat()

@@ -24,6 +24,9 @@ object Daten {
         if (demo(c)) return JSONObject().put("zeit", java.time.LocalDateTime.now().withSecond(0).toString())
             .put("feuchte", 54).put("co2", 742).put("temperatur", 21.4).put("laerm", 36)
             .put("entfeuchter_an", false).put("entfeuchter_tank_voll", false).put("nachtruhe", false)
+            .put("roborock_akku", 100).put("roborock_zustand", "voll geladen").put("roborock_heute", false)
+            .put("roborock_letzte_runde", java.time.LocalDateTime.now().minusDays(1).withHour(11).withMinute(12).withSecond(0).withNano(0).toString())
+            .put("roborock_letzte_dauer", 52).put("roborock_letzte_flaeche", 38.5).put("roborock", "außerhalb des Zeitfensters")
         val s = JSONObject(laden(c, "status.enc"))
         runCatching { live(s) }
         return s
@@ -86,5 +89,71 @@ object Daten {
         val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
         cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key.copyOfRange(16, 32), "AES"), IvParameterSpec(iv))
         return cipher.doFinal(ohneMac.copyOfRange(25, ohneMac.size))
+    }
+
+    /** Eine Zeile aus dem Verlauf des Boten. */
+    data class Messung(
+        val zeit: java.time.LocalDateTime, val feuchte: Int?, val co2: Int?, val temperatur: Double?, val laerm: Int?,
+        val entfeuchter: Boolean, val aktion: String, val roborock: String,
+    )
+
+    @Volatile private var zwischen: Pair<Long, List<Messung>>? = null
+
+    /** Messungen der letzten [tage] Tage (aktueller und voriger Monat), älteste zuerst. */
+    fun verlauf(c: Context, tage: Int): List<Messung> {
+        val ab = java.time.LocalDateTime.now().minusDays(tage.toLong())
+        zwischen?.let { (t, l) -> if (System.currentTimeMillis() - t < 4 * 60_000 && l.isNotEmpty()) return l.filter { it.zeit.isAfter(ab) } }
+        val alle = if (demo(c)) demoVerlauf() else {
+            val monate = (JSONObject(laden(c, "status.enc")).optJSONArray("monate") ?: org.json.JSONArray())
+            val liste = (0 until monate.length()).map { monate.getString(it) }.takeLast(2)
+            liste.flatMap { csvLesen(laden(c, "verlauf-$it.csv.enc")) }
+        }.sortedBy { it.zeit }
+        zwischen = System.currentTimeMillis() to alle
+        return alle.filter { it.zeit.isAfter(ab) }
+    }
+
+    private fun csvLesen(text: String): List<Messung> {
+        val zeilen = text.trim().lines()
+        if (zeilen.size < 2) return emptyList()
+        val kopf = zeilen.first().split(',')
+        fun idx(n: String) = kopf.indexOf(n)
+        val iZ = idx("zeit"); val iF = idx("feuchte"); val iC = idx("co2"); val iT = idx("temperatur"); val iL = idx("laerm")
+        val iE = idx("entfeuchter_an"); val iA = idx("entfeuchter_aktion"); val iR = idx("roborock")
+        return zeilen.drop(1).mapNotNull { z ->
+            val w = felder(z)
+            fun f(i: Int) = if (i in w.indices) w[i].trim() else ""
+            val zeit = runCatching { java.time.OffsetDateTime.parse(f(iZ)).atZoneSameInstant(java.time.ZoneId.systemDefault()).toLocalDateTime() }
+                .recoverCatching { java.time.LocalDateTime.parse(f(iZ)) }.getOrNull() ?: return@mapNotNull null
+            Messung(zeit, f(iF).toDoubleOrNull()?.toInt(), f(iC).toDoubleOrNull()?.toInt(), f(iT).toDoubleOrNull(), f(iL).toDoubleOrNull()?.toInt(),
+                f(iE) == "1" || f(iE).equals("true", true), f(iA), f(iR))
+        }
+    }
+
+    /** CSV-Zeile in Felder, Anführungszeichen wie beim Python-csv-Modul. */
+    private fun felder(z: String): List<String> {
+        val aus = mutableListOf<String>(); val sb = StringBuilder(); var inQ = false; var i = 0
+        while (i < z.length) {
+            val ch = z[i]
+            when {
+                inQ && ch == '"' && i + 1 < z.length && z[i + 1] == '"' -> { sb.append('"'); i++ }
+                ch == '"' -> inQ = !inQ
+                ch == ',' && !inQ -> { aus.add(sb.toString()); sb.clear() }
+                else -> sb.append(ch)
+            }
+            i++
+        }
+        aus.add(sb.toString()); return aus
+    }
+
+    private fun demoVerlauf(): List<Messung> {
+        val jetzt = java.time.LocalDateTime.now().withSecond(0).withNano(0)
+        return (0 until 7 * 288).map { i ->
+            val t = jetzt.minusMinutes(5L * i)
+            val h = t.hour + t.minute / 60.0
+            val feuchte = 53 + 4 * kotlin.math.sin((h - 6) / 24 * 2 * Math.PI) + (if (h in 7.0..7.5) 6 else 0) + (i % 7) / 3.0
+            val co2 = 600 + 350 * kotlin.math.max(0.0, kotlin.math.sin((h - 2) / 24 * 2 * Math.PI)) + (i % 11) * 4
+            Messung(t, feuchte.toInt(), co2.toInt(), 20.5 + 1.2 * kotlin.math.sin((h - 9) / 24 * 2 * Math.PI), 35 + (i % 9),
+                feuchte > 57, if (feuchte > 57) "läuft" else "aus", "")
+        }
     }
 }

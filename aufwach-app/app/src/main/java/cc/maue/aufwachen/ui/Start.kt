@@ -56,6 +56,14 @@ import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -104,7 +112,7 @@ private fun Context.erlaubt(p: String) = checkSelfPermission(p) == PackageManage
 private fun Context.oeffnen(i: Intent) = runCatching { startActivity(i) }.isSuccess
 
 /** Ein offener Punkt der Einrichtung. */
-private data class Punkt(val icon: androidx.compose.ui.graphics.vector.ImageVector, val titel: String, val text: String, val los: () -> Unit)
+private data class Offen(val icon: androidx.compose.ui.graphics.vector.ImageVector, val titel: String, val text: String, val los: () -> Unit)
 
 @Composable
 fun Startseite(tick: Int) {
@@ -160,85 +168,117 @@ fun Startseite(tick: Int) {
     val offen = remember(stand) {
         buildList {
             if (Build.VERSION.SDK_INT >= 33 && !c.erlaubt(Manifest.permission.POST_NOTIFICATIONS))
-                add(Punkt(Icons.Rounded.Notifications, "Benachrichtigungen", "Für Update- und Statushinweise") {
+                add(Offen(Icons.Rounded.Notifications, "Benachrichtigungen", "Für Update- und Statushinweise") {
                     hinweise.launch(Manifest.permission.POST_NOTIFICATIONS) })
             if (c.packageName !in NotificationManagerCompat.getEnabledListenerPackages(c))
-                add(Punkt(Icons.Rounded.NotificationsActive, "Benachrichtigungszugriff", "Damit die App sieht, ob dein Wecker noch klingelt oder schlummert, und den Hinweis der Kamera erkennt") {
+                add(Offen(Icons.Rounded.NotificationsActive, "Benachrichtigungszugriff", "Damit die App sieht, ob dein Wecker noch klingelt oder schlummert, und den Hinweis der Kamera erkennt") {
                     c.oeffnen(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) })
             if (!c.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(c.packageName))
-                add(Punkt(Icons.Rounded.BatteryChargingFull, "Akku nicht einschränken", "Sonst schläft die App morgens, wenn sie gebraucht wird. Raumklima auf „Nicht optimieren“ stellen.") {
+                add(Offen(Icons.Rounded.BatteryChargingFull, "Akku nicht einschränken", "Sonst schläft die App morgens, wenn sie gebraucht wird. Raumklima auf „Nicht optimieren“ stellen.") {
                     c.oeffnen(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) })
             if (Willkommen.aktiv(c) && Build.VERSION.SDK_INT >= 29 && !c.erlaubt(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
-                add(Punkt(Icons.Rounded.LocationOn, "Standort „Immer zulassen“", "Nur so merkt die App, wenn du nach Hause kommst. Der Standort bleibt auf dem Handy.") {
+                add(Offen(Icons.Rounded.LocationOn, "Standort „Immer zulassen“", "Nur so merkt die App, wenn du nach Hause kommst. Der Standort bleibt auf dem Handy.") {
                     if (!c.erlaubt(Manifest.permission.ACCESS_FINE_LOCATION))
                         standort.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
                     else hintergrund.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION) })
         }
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 16.dp, end = 16.dp,
-            top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() + 24.dp,
-            bottom = WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding() + 24.dp,
-        ),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
-                Text("Raumklima", style = MaterialTheme.typography.headlineLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
-                Spacer(Modifier.height(4.dp))
-                Status(if (offen.isEmpty()) "Alles eingerichtet" else "${offen.size} ${if (offen.size == 1) "Punkt fehlt" else "Punkte fehlen"} noch",
-                    if (offen.isEmpty()) Ampel.gruen else Ampel.orange)
-            }
-        }
-        update?.let { u ->
+    val seiten = listOf("Übersicht" to Icons.Rounded.Dashboard, "Automationen" to Icons.Rounded.AutoAwesome, "Protokoll" to Icons.AutoMirrored.Rounded.ReceiptLong)
+    val pager = rememberPagerState { seiten.size }
+    val haus = remember(stand, klima) { Haus.stand(c) }
+
+    @Composable
+    fun Seite(titel: String, untertitel: @Composable () -> Unit, innen: PaddingValues, inhalt: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = innen.calculateTopPadding() + 16.dp, bottom = innen.calculateBottomPadding() + 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             item {
-                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), onClick = { Updater.oeffnen(c, u) },
-                    modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.SystemUpdate, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("Version ${u.version} ist da", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                            Text("Tippen zum Laden, deine Einstellungen bleiben", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
+                    Text(titel, style = MaterialTheme.typography.headlineLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
+                    Spacer(Modifier.height(4.dp))
+                    untertitel()
+                }
+            }
+            inhalt()
+        }
+    }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            NavigationBar {
+                seiten.forEachIndexed { i, (name, icon) ->
+                    NavigationBarItem(selected = pager.currentPage == i, onClick = { scope.launch { pager.animateScrollToPage(i) } },
+                        icon = { Icon(icon, null) }, label = { Text(name) })
+                }
+            }
+        },
+    ) { innen ->
+        HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1) { seite ->
+            when (seite) {
+                0 -> Seite("Raumklima", {
+                    Status(if (offen.isEmpty()) "Alles eingerichtet" else "${offen.size} ${if (offen.size == 1) "Punkt fehlt" else "Punkte fehlen"} noch",
+                        if (offen.isEmpty()) Ampel.gruen else Ampel.orange)
+                }, innen) {
+                    update?.let { u ->
+                        item {
+                            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), onClick = { Updater.oeffnen(c, u) },
+                                modifier = Modifier.fillMaxWidth()) {
+                                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.SystemUpdate, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                                    Spacer(Modifier.width(12.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text("Version ${u.version} ist da", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                        Text("Tippen zum Laden, deine Einstellungen bleiben", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (offen.isNotEmpty()) item {
+                        Karte(Icons.Rounded.Shield, "Einrichtung", "Ein Tipp pro Punkt, dann läuft alles von allein", akzent = Ampel.orange) {
+                            offen.forEach { Zeile(it.icon, it.titel, "Erlauben", beschreibung = it.text, onClick = it.los) }
+                        }
+                    }
+                    item { KlimaKarte(klima, haus, laedt) { laden() } }
+                    uebersicht(stand)
+                }
+                1 -> Seite("Automationen", { Status("Alles, was automatisch passiert, mit Test", MaterialTheme.colorScheme.primary) }, innen) {
+                    item { MorgenKarte(stand, ::gespeichert) { dialog = it } }
+                    item { AnkommenKarte(stand, ::gespeichert, onDialog = { dialog = it }) {
+                        if (!c.erlaubt(Manifest.permission.ACCESS_FINE_LOCATION))
+                            standort.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+                        else Willkommen.standortSetzen(c) { t -> scope.launch { Toast.makeText(c, t, Toast.LENGTH_LONG).show(); gespeichert() } }
+                    } }
+                    boteAutomationen(stand)
+                }
+                else -> Seite("Protokoll", { Status("Was passiert ist, Daten und Export", MaterialTheme.colorScheme.primary) }, innen) {
+                    item { VerlaufKarte(stand, alleZeigen = true) }
+                    protokollSeite(stand)
+                    item {
+                        Karte(Icons.Rounded.Key, "Daten", "Messwerte, Widget und Export") {
+                            Zeile(Icons.Rounded.Key, "Schlüssel der Messdaten", if (Daten.schluessel(c).isEmpty()) "fehlt" else "hinterlegt",
+                                if (Daten.schluessel(c).isEmpty()) Ampel.orange else null) { dialog = "schluessel" }
+                            Zeile(Icons.Rounded.Widgets, "Widget auf den Startbildschirm", beschreibung = "Von einer Kachel bis groß, passend zu deinen anderen Widgets") {
+                                val am = c.getSystemService(AppWidgetManager::class.java)
+                                if (am.isRequestPinAppWidgetSupported) am.requestPinAppWidget(ComponentName(c, KlimaWidgetEmpfaenger::class.java), null, null)
+                                else Toast.makeText(c, "Startbildschirm lang drücken, Widgets, Raumklima", Toast.LENGTH_LONG).show()
+                            }
+                            Zeile(Icons.Rounded.FileDownload, "Verlauf exportieren", beschreibung = "Alle Messungen als CSV, z. B. für Excel") {
+                                export.launch("raumklima-${LocalDate.now()}.csv")
+                            }
+                        }
+                    }
+                    item {
+                        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Version ${Updater.installiertName(c)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(onClick = { c.oeffnen(Intent(Intent.ACTION_VIEW, Uri.parse(DATENSCHUTZ))) }) { Text("Datenschutz") }
                         }
                     }
                 }
-            }
-        }
-        item { KlimaKarte(klima, remember(stand, klima) { Haus.stand(c) }, laedt) { laden() } }
-        if (offen.isNotEmpty()) item {
-            Karte(Icons.Rounded.Shield, "Einrichtung", "Ein Tipp pro Punkt, dann läuft alles von allein", akzent = Ampel.orange) {
-                offen.forEach { Zeile(it.icon, it.titel, "Erlauben", beschreibung = it.text, onClick = it.los) }
-            }
-        }
-        item { MorgenKarte(stand, ::gespeichert) { dialog = it } }
-        item { AnkommenKarte(stand, ::gespeichert, onDialog = { dialog = it }) {
-            if (!c.erlaubt(Manifest.permission.ACCESS_FINE_LOCATION))
-                standort.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-            else Willkommen.standortSetzen(c) { t -> scope.launch { Toast.makeText(c, t, Toast.LENGTH_LONG).show(); gespeichert() } }
-        } }
-        item {
-            Karte(Icons.Rounded.Key, "Daten", "Messwerte, Widget und Export") {
-                Zeile(Icons.Rounded.Key, "Schlüssel der Messdaten", if (Daten.schluessel(c).isEmpty()) "fehlt" else "hinterlegt",
-                    if (Daten.schluessel(c).isEmpty()) Ampel.orange else null) { dialog = "schluessel" }
-                Zeile(Icons.Rounded.Widgets, "Widget auf den Startbildschirm", beschreibung = "Von einer Kachel bis groß, passend zu deinen anderen Widgets") {
-                    val am = c.getSystemService(AppWidgetManager::class.java)
-                    if (am.isRequestPinAppWidgetSupported) am.requestPinAppWidget(ComponentName(c, KlimaWidgetEmpfaenger::class.java), null, null)
-                    else Toast.makeText(c, "Startbildschirm lang drücken, Widgets, Raumklima", Toast.LENGTH_LONG).show()
-                }
-                Zeile(Icons.Rounded.FileDownload, "Verlauf exportieren", beschreibung = "Alle Messungen als CSV, z. B. für Excel") {
-                    export.launch("raumklima-${LocalDate.now()}.csv")
-                }
-            }
-        }
-        item { VerlaufKarte(stand) }
-        item {
-            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Text("Version ${Updater.installiertName(c)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = { c.oeffnen(Intent(Intent.ACTION_VIEW, Uri.parse(DATENSCHUTZ))) }) { Text("Datenschutz") }
             }
         }
     }
@@ -357,12 +397,12 @@ private fun AnkommenKarte(stand: Int, gespeichert: () -> Unit, onDialog: (String
 }
 
 @Composable
-private fun VerlaufKarte(stand: Int) {
+private fun VerlaufKarte(stand: Int, alleZeigen: Boolean = false) {
     val c = LocalContext.current
     val zeilen = remember(stand) {
         Logik.prefs(c).getString("protokoll", "").orEmpty().lines().filter { it.isNotBlank() }
     }
-    var alle by remember { mutableStateOf(false) }
+    var alle by remember { mutableStateOf(alleZeigen) }
     Karte(Icons.Rounded.History, "Verlauf", if (zeilen.isEmpty()) "Noch nichts passiert" else "Was die App zuletzt getan hat") {
         val heute = LocalDate.now().toString()
         (if (alle) zeilen else zeilen.take(4)).forEach { z ->
