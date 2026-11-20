@@ -42,6 +42,11 @@ class WidgetVorschau : Activity() {
         widget(360, 200, wurzel)   // breit, mittel
         setContentView(wurzel)
         KlimaWidget.aktualisieren(this)
+        // Test: nach 6 Sekunden geht das Licht "aus", das Widget muss sich sofort neu zeichnen
+        if (intent.hasExtra("schalten")) android.os.Handler(mainLooper).postDelayed({
+            Haus.setzen(this, "licht", "Bett", false); Haus.setzen(this, "fenster", "links", true)
+            KlimaWidget.aktualisieren(this)
+        }, 6000)
     }
     override fun onStart() { super.onStart(); host.startListening() }
     override fun onStop() { host.stopListening(); super.onStop() }

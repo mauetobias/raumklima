@@ -74,4 +74,9 @@ adb shell appwidget grantbind --package $P --user 0
 for modus in yes; do adb shell cmd uimode night $modus; done
 adb shell am start -n $P/.WidgetVorschau >/dev/null; sleep 10
 adb exec-out screencap -p > fotos/widget.png
+adb shell am force-stop $P
+adb shell am start -n $P/.WidgetVorschau --ez schalten true >/dev/null; sleep 4
+adb exec-out screencap -p > fotos/widget-vorher.png
+sleep 6
+adb exec-out screencap -p > fotos/widget-nachher.png
 ls -la fotos
