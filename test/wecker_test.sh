@@ -55,7 +55,9 @@ class H(http.server.BaseHTTPRequestHandler):
     def do_GET(s):
         open('treffer.log','a').write(s.path+'\n'); s.send_response(200); s.end_headers(); s.wfile.write(b'ok')
     def log_message(s,*a): pass
-http.server.HTTPServer(('0.0.0.0',8000),H).serve_forever()" &
+http.server.HTTPServer(('0.0.0.0',8000),H).serve_forever()" >/dev/null 2>&1 &
+SERVER=$!
+trap 'kill $SERVER 2>/dev/null' EXIT
 
 adb shell settings put global auto_time 0 >/dev/null 2>&1
 adb shell setprop persist.sys.timezone Europe/Berlin
