@@ -1,0 +1,29 @@
+name: Roborock-Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q -r requirements.txt
+      - name: Zustand abfragen (nur lesen, schreibt nichts)
+        run: |
+          mkdir -p datenzweig && git fetch -q --depth 1 origin daten && git --work-tree=datenzweig checkout FETCH_HEAD -- . && git reset -q
+          SPEICHER=datenzweig/speicher python - <<'P'
+          import asyncio, traceback
+          from aufgaben import roborock
+          try:
+              print("Ergebnis:", asyncio.run(asyncio.wait_for(roborock._zustand_holen(), 60)))
+          except Exception:
+              traceback.print_exc()
+          P
+        env:
+          TOKEN_SCHLUESSEL: ${{ secrets.TOKEN_SCHLUESSEL }}
+          ROBOROCK_EMAIL: ${{ secrets.ROBOROCK_EMAIL }}
