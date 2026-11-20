@@ -25,8 +25,17 @@ object Haus {
         return true
     }
 
+    /** Merkt sich die letzte Meldung von Google Home (für das Protokoll). */
+    fun empfangen(c: Context, text: String) {
+        p(c).edit().putString("meldung_text", text).putLong("meldung_zeit", System.currentTimeMillis()).apply()
+    }
+    fun letzteMeldung(c: Context): Pair<Long, String>? {
+        val t = p(c).getLong("meldung_zeit", 0L); if (t == 0L) return null
+        return t to p(c).getString("meldung_text", "").orEmpty()
+    }
+
     fun stand(c: Context): Stand {
-        val alle = p(c).all
+        val alle = p(c).all.filterValues { it is Boolean }
         fun liste(art: String) = alle.filterKeys { it.startsWith("$art|") }.mapKeys { it.key.substringAfter('|') }
         val l = liste("licht"); val f = liste("fenster")
         val k = liste("kamera")

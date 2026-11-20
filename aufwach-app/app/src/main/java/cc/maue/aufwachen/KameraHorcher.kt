@@ -23,14 +23,22 @@ class KameraHorcher : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         if (istWecker(sbn)) { Logik.weckerKlingelt(applicationContext); return }
         if (!sbn.packageName.startsWith("com.google.android.apps.chromecast")) return
-        val titel = sbn.notification.extras.getCharSequence("android.title")?.toString().orEmpty()
-        if (titel.contains("Raumklima-Status")) {
-            val text = sbn.notification.extras.getCharSequence("android.text")?.toString().orEmpty()
+        val zeilen = texte(sbn.notification)
+        val alles = zeilen.joinToString(" | ")
+        // Licht, Fenster, Kamera: jede Zeile prüfen (Google fasst mehrere Hinweise gern zusammen)
+        val meldungen = zeilen.mapNotNull { MUSTER.find(it)?.value }
+        if (meldungen.isNotEmpty() || alles.contains("Raumklima-Status")) {
             runCatching { cancelNotification(sbn.key) }
-            if (Haus.melden(applicationContext, text)) cc.maue.aufwachen.widget.KlimaWidget.aktualisieren(applicationContext)
+            var verstanden = 0
+            meldungen.forEach { if (Haus.melden(applicationContext, it)) verstanden++ }
+            Haus.empfangen(applicationContext, if (verstanden > 0) meldungen.joinToString(", ") else "nicht verstanden: ${alles.take(80)}")
+            if (verstanden > 0) cc.maue.aufwachen.widget.KlimaWidget.aktualisieren(applicationContext)
             return
         }
-        if (!titel.contains("Willkommen-Ausloeser")) return
+        if (!alles.contains("Willkommen-Ausloeser")) {
+            Haus.empfangen(applicationContext, "anderer Hinweis: ${alles.take(80)}") // zur Fehlersuche, bleibt auf dem Handy
+            return
+        }
         runCatching { cancelNotification(sbn.key) }
         Willkommen.kameraSahJemanden(applicationContext)
     }
@@ -44,6 +52,18 @@ class KameraHorcher : NotificationListenerService() {
 
     companion object {
         @Volatile var instanz: KameraHorcher? = null
+
+        private val MUSTER = Regex("(?i)(licht|fenster|kamera)\\s+.+?\\s+(an|aus|auf|zu)\\b")
+
+        /** Alle Texte einer Benachrichtigung: Titel, Text, langer Text, Zeilen einer Sammelmeldung. */
+        fun texte(n: Notification): List<String> {
+            val e = n.extras
+            val l = mutableListOf<String>()
+            listOf("android.title", "android.text", "android.bigText", "android.subText", "android.summaryText", "android.title.big")
+                .forEach { k -> e.getCharSequence(k)?.toString()?.takeIf { it.isNotBlank() }?.let { l.add(it) } }
+            e.getCharSequenceArray("android.textLines")?.forEach { l.add(it.toString()) }
+            return l.flatMap { it.lines() }.map { it.trim() }.filter { it.isNotEmpty() }
+        }
 
         private val UHR_APPS = listOf("deskclock", "clockpackage", "com.android.alarmclock", "clock")
 

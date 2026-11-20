@@ -277,6 +277,10 @@ fun LazyListScope.protokollSeite(stand: Int) {
                 MaterialTheme.colorScheme.onSurfaceVariant)
             Zeile(Icons.Rounded.Air, "Entfeuchter", s?.optString("entfeuchter_aktion", "")?.ifEmpty { "··" } ?: "··", MaterialTheme.colorScheme.onSurfaceVariant)
             Zeile(Icons.Rounded.CleaningServices, "Roborock", s?.optString("roborock", "")?.ifEmpty { "··" } ?: "··", MaterialTheme.colorScheme.onSurfaceVariant)
+            val m = cc.maue.aufwachen.Haus.letzteMeldung(LocalContext.current)
+            Zeile(Icons.Rounded.Home, "Letzte Meldung von Google Home",
+                m?.let { java.time.Instant.ofEpochMilli(it.first).atZone(java.time.ZoneId.systemDefault()).format(TAG_HM) } ?: "noch keine",
+                if (m == null) Ampel.orange else MaterialTheme.colorScheme.onSurfaceVariant, beschreibung = m?.second)
             Zeile(Icons.Rounded.WaterDrop, "Live-Abfrage beim Home Coach",
                 if ((s?.optLong("netatmo_bis", 0L) ?: 0L) * 1000 > System.currentTimeMillis()) "bereit" else "wartet auf den Boten",
                 MaterialTheme.colorScheme.onSurfaceVariant)
