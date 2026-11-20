@@ -4,5 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools">
     <application android:usesCleartextTraffic="true" tools:replace="android:usesCleartextTraffic">
         <activity android:name=".WidgetVorschau" android:exported="true" />
+        <activity android:name=".FakeHome" android:exported="true" />
     </application>
 </manifest>

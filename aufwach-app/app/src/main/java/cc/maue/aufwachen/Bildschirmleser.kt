@@ -15,7 +15,8 @@ class Bildschirmleser : AccessibilityService() {
 
     override fun onAccessibilityEvent(e: AccessibilityEvent) {
         val pkg = e.packageName?.toString() ?: return
-        if (!pkg.startsWith("com.google.android.apps.chromecast") && !pkg.contains("midea") && !pkg.contains("nethome")) return
+        if (!pkg.startsWith("com.google.android.apps.chromecast") && !pkg.contains("midea") && !pkg.contains("nethome") &&
+            !(BuildConfig.DEBUG && pkg == packageName)) return
         val jetzt = System.currentTimeMillis()
         if (jetzt - zuletzt < 400) return // nicht bei jedem Pixel neu lesen
         zuletzt = jetzt

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["test/wecker_test.sh", ".github/workflows/wecker-test.yml"]
+    paths: ["test/wecker_test.sh", "test/leser_test.sh", ".github/workflows/wecker-test.yml"]
 
 jobs:
   test:
@@ -33,4 +33,4 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: bash test/wecker_test.sh
+          script: bash test/leser_test.sh; bash test/wecker_test.sh
