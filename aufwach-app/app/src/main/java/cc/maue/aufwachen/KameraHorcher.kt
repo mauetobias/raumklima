@@ -53,7 +53,7 @@ class KameraHorcher : NotificationListenerService() {
     companion object {
         @Volatile var instanz: KameraHorcher? = null
 
-        private val MUSTER = Regex("(?i)(licht|fenster|kamera)\\s+.+?\\s+(an|aus|auf|zu)\\b")
+        private val MUSTER = Regex("(?i)(licht|fenster|kamera|entfeuchter|roborock)\\s+.+?\\s+(an|aus|auf|zu)\\b")
 
         /** Alle Texte einer Benachrichtigung: Titel, Text, langer Text, Zeilen einer Sammelmeldung. */
         fun texte(n: Notification): List<String> {

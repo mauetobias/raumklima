@@ -228,12 +228,12 @@ private fun kameraText(h: Haus.Stand) = when (h.kameraAn) { null -> "?"; true ->
 
 private val TUERKIS = Color(0xFF4DD0E1)
 
-private fun entfeuchterText(k: Klima) = when { k.tankVoll -> "voll"; k.entfeuchterAn -> if (k.nacht) "leise" else "läuft"; else -> "aus" }
+private fun entfeuchterText(k: Klima, h: Haus.Stand? = null) = when { k.tankVoll -> "voll"; h?.entfeuchterAn ?: k.entfeuchterAn -> if (k.nacht) "leise" else "läuft"; else -> "aus" }
 
 @Composable
-private fun EntfeuchterSymbol(k: Klima, mitText: Boolean) =
-    HausSymbol(R.drawable.ic_entfeuchter, "Entfeuchter", k.entfeuchterAn || k.tankVoll, if (k.tankVoll) KAMERA_ROT else TUERKIS,
-        if (mitText) entfeuchterText(k) else null)
+private fun EntfeuchterSymbol(k: Klima, mitText: Boolean, h: Haus.Stand? = null) =
+    HausSymbol(R.drawable.ic_entfeuchter, "Entfeuchter", (h?.entfeuchterAn ?: k.entfeuchterAn) || k.tankVoll, if (k.tankVoll) KAMERA_ROT else TUERKIS,
+        if (mitText) entfeuchterText(k, h) else null)
 
 @Composable
 private fun HausZeile(h: Haus.Stand, k: Klima, mitText: Boolean) {
@@ -245,7 +245,7 @@ private fun HausZeile(h: Haus.Stand, k: Klima, mitText: Boolean) {
         Spacer(GlanceModifier.width(abstand))
         HausSymbol(R.drawable.ic_kamera, "Kamera", h.kameraAn == true, KAMERA_ROT, if (mitText) kameraText(h) else null)
         Spacer(GlanceModifier.width(abstand))
-        EntfeuchterSymbol(k, mitText)
+        EntfeuchterSymbol(k, mitText, h)
     }
 }
 
@@ -262,7 +262,7 @@ private fun HausRaster(h: Haus.Stand, k: Klima) {
         Row {
             HausSymbol(R.drawable.ic_kamera, "Kamera", h.kameraAn == true, KAMERA_ROT, null)
             Spacer(GlanceModifier.width(6.dp))
-            EntfeuchterSymbol(k, false)
+            EntfeuchterSymbol(k, false, h)
         }
     }
 }
@@ -292,7 +292,9 @@ private fun StatusLeiste(h: Haus.Stand, k: Klima, mitText: Boolean) {
         Feld(R.drawable.ic_lampe, "Licht", h.lichterAn.isNotEmpty(), GELB, lichtText(h))
         Feld(R.drawable.ic_fenster, "Fenster", h.fensterAuf.isNotEmpty(), HIMMEL, fensterText(h))
         Feld(R.drawable.ic_kamera, "Kamera", h.kameraAn == true, KAMERA_ROT, kameraText(h))
-        Feld(R.drawable.ic_entfeuchter, "Entfeuchter", k.entfeuchterAn || k.tankVoll, if (k.tankVoll) KAMERA_ROT else TUERKIS, entfeuchterText(k))
+        val ent = h.entfeuchterAn ?: k.entfeuchterAn
+        Feld(R.drawable.ic_entfeuchter, "Entfeuchter", ent || k.tankVoll, if (k.tankVoll) KAMERA_ROT else TUERKIS,
+            when { k.tankVoll -> "voll"; ent -> "läuft"; else -> "aus" })
     }
 }
 

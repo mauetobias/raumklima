@@ -136,8 +136,9 @@ fun KlimaKarte(k: Klima, haus: Haus.Stand, laedt: Boolean, neuLaden: () -> Unit)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 HausKachel(Icons.Rounded.Videocam, "Kamera", haus.kameraAn == true, Ampel.rot,
                     when (haus.kameraAn) { null -> "?"; true -> "nimmt auf"; false -> "aus" }, Modifier.weight(1f))
-                HausKachel(Icons.Rounded.Air, "Entfeuchter", k.entfeuchterAn || k.tankVoll, if (k.tankVoll) Ampel.rot else Ampel.tuerkis,
-                    when { k.tankVoll -> "Tank voll"; k.entfeuchterAn -> if (k.nacht) "läuft leise" else "läuft"; else -> "pausiert" },
+                val ent = haus.entfeuchterAn ?: k.entfeuchterAn
+                HausKachel(Icons.Rounded.Air, "Entfeuchter", ent || k.tankVoll, if (k.tankVoll) Ampel.rot else Ampel.tuerkis,
+                    when { k.tankVoll -> "Tank voll"; ent -> if (k.nacht) "läuft leise" else "läuft"; else -> "pausiert" },
                     Modifier.weight(1f))
             }
         }

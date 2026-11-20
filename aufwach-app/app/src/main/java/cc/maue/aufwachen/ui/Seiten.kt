@@ -110,7 +110,9 @@ private fun dauerText(min: Long) = if (min < 60) "$min min" else "${min / 60} h 
 private fun RoborockKarte(stand: Int) {
     val s = boteStatus(stand)
     val akku = s?.optInt("roborock_akku", -1)?.takeIf { it >= 0 }
-    val zustand = s?.optString("roborock_zustand", "")?.ifEmpty { null }
+    val ctx = LocalContext.current
+    val live = remember(stand) { cc.maue.aufwachen.Haus.stand(ctx) }.roborockFaehrt
+    val zustand = if (live == true) "saugt" else s?.optString("roborock_zustand", "")?.ifEmpty { null }
     val heute = s?.optBoolean("roborock_heute", false) == true
     val faehrt = zustand?.startsWith("saugt") == true || zustand == "fährt zur Station"
     val letzte = s?.optString("roborock_letzte_runde", "").orEmpty()

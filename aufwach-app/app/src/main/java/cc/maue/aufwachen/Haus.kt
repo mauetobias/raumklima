@@ -9,7 +9,7 @@ import android.content.Context
  */
 object Haus {
     data class Stand(val lichterAn: List<String>, val lichterBekannt: Int, val fensterAuf: List<String>, val fensterBekannt: Int,
-                     val kameraAn: Boolean?)
+                     val kameraAn: Boolean?, val entfeuchterAn: Boolean?, val roborockFaehrt: Boolean?)
 
     private fun p(c: Context) = c.getSharedPreferences("haus", Context.MODE_PRIVATE)
 
@@ -20,7 +20,7 @@ object Haus {
         val art = w.first().lowercase()
         val name = w.subList(1, w.size - 1).joinToString(" ")
         val wert = when (w.last().lowercase()) { "an", "auf", "offen", "on", "open" -> true; "aus", "zu", "off", "closed" -> false; else -> return false }
-        val schluessel = when (art) { "licht", "lampe" -> "licht"; "fenster", "tür", "tuer" -> "fenster"; "kamera" -> "kamera"; else -> return false }
+        val schluessel = when (art) { "licht", "lampe" -> "licht"; "fenster", "tür", "tuer" -> "fenster"; "kamera" -> "kamera"; "entfeuchter" -> "entfeuchter"; "roborock" -> "roborock"; else -> return false }
         p(c).edit().putBoolean("$schluessel|$name", wert).putLong("zeit", System.currentTimeMillis()).apply()
         return true
     }
@@ -43,8 +43,10 @@ object Haus {
         val alle = p(c).all.filterValues { it is Boolean }
         fun liste(art: String) = alle.filterKeys { it.startsWith("$art|") }.mapKeys { it.key.substringAfter('|') }
         val l = liste("licht"); val f = liste("fenster")
-        val k = liste("kamera")
+        val k = liste("kamera"); val e = liste("entfeuchter"); val r = liste("roborock")
         return Stand(l.filterValues { it == true }.keys.sorted(), l.size, f.filterValues { it == true }.keys.sorted(), f.size,
-            if (k.isEmpty()) null else k.values.any { it == true })
+            if (k.isEmpty()) null else k.values.any { it == true },
+            if (e.isEmpty()) null else e.values.any { it == true },
+            if (r.isEmpty()) null else r.values.any { it == true })
     }
 }
