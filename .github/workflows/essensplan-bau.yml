@@ -1,0 +1,56 @@
+name: Essensplan bauen (verschlüsselt)
+
+# Baut eine private App auf dem kostenlosen öffentlichen Runner, ohne dass Code oder APK öffentlich werden:
+# Der Runner erzeugt einen Einmal-Schlüssel und legt nur den öffentlichen Teil hier ab. Der Quellcode kommt
+# damit verschlüsselt zurück, die fertige APK und das Log gehen verschlüsselt wieder raus.
+on:
+  push:
+    branches: ["bau/essensplan"]
+
+permissions:
+  contents: write
+
+jobs:
+  bau:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+      - name: Einmal-Schlüssel erzeugen
+        run: |
+          umask 077
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out "$RUNNER_TEMP/priv.pem"
+          openssl pkey -in "$RUNNER_TEMP/priv.pem" -pubout -out bau/pub.pem
+          echo "${{ github.run_id }}" > bau/lauf.txt
+          git config user.name bau && git config user.email bau@users.noreply.github.com
+          git add bau && git commit -qm "Schlüssel [skip ci]" && git push -q
+      - name: Auf verschlüsseltes Paket warten
+        run: |
+          for i in $(seq 1 120); do
+            git pull -q --rebase || true
+            [ -f bau/paket.enc ] && [ -f bau/schluessel.enc ] && exit 0
+            sleep 10
+          done
+          exit 1
+      - name: Entschlüsseln und bauen
+        run: |
+          umask 077
+          K="$RUNNER_TEMP/k"; S="$RUNNER_TEMP/src"; mkdir -p "$S"
+          openssl pkeyutl -decrypt -inkey "$RUNNER_TEMP/priv.pem" -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -in bau/schluessel.enc -out "$K"
+          openssl enc -d -aes-256-cbc -pbkdf2 -pass "file:$K" -in bau/paket.enc | tar xz -C "$S"
+          ok=0
+          (cd "$S" && GITHUB_RUN_NUMBER="$(cat versioncode)" gradle :app:assembleRelease --no-daemon > "$RUNNER_TEMP/log.txt" 2>&1) && ok=1
+          if [ "$ok" = 1 ]; then
+            openssl enc -aes-256-cbc -pbkdf2 -pass "file:$K" -in "$S/app/build/outputs/apk/release/app-release.apk" -out bau/ergebnis.enc
+          fi
+          tail -c 30000 "$RUNNER_TEMP/log.txt" | openssl enc -aes-256-cbc -pbkdf2 -pass "file:$K" -out bau/log.enc
+          echo "$ok" > bau/ok.txt
+          git add bau && git commit -qm "Ergebnis [skip ci]" && git pull -q --rebase && git push -q
+          echo "Build: $ok"
