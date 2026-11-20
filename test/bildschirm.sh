@@ -34,15 +34,20 @@ adb shell chmod 644 /data/local/tmp/a.xml
 adb shell run-as $P mkdir -p shared_prefs
 adb shell run-as $P cp /data/local/tmp/a.xml shared_prefs/aufwachen.xml
 adb shell settings put system screen_off_timeout 600000
+# Der Launcher des Emulators hängt gern beim Start und zeigt dann einen Fehlerdialog über allem
+adb shell pm disable-user --user 0 com.google.android.apps.nexuslauncher >/dev/null 2>&1
+adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1
+sleep 5
 adb shell svc power stayon true
 for modus in no yes; do
   adb shell cmd uimode night $modus; sleep 3
   adb shell am force-stop $P
   adb shell am start -n $P/.MainActivity >/dev/null; sleep 8
+  adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1; sleep 2
   name=$([ $modus = yes ] && echo dunkel || echo hell)
   for i in 1 2 3 4; do
     adb exec-out screencap -p > fotos/${name}-$i.png
-    adb shell input swipe 540 1900 540 700 600; sleep 2
+    adb shell input swipe 700 2400 700 900 800; sleep 2
   done
 done
 # Dialog Zeitwahl
