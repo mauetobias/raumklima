@@ -243,7 +243,7 @@ private fun Messwert(titel: String, wert: String, farbe: ColorProvider, groesse:
 @Composable
 private fun StatusLeiste(h: Haus.Stand, k: Klima, mitText: Boolean) {
     @Composable
-    fun Feld(bild: Int, name: String, an: Boolean, farbe: Color, text: String) {
+    fun androidx.glance.layout.RowScope.Feld(bild: Int, name: String, an: Boolean, farbe: Color, text: String) {
         Column(GlanceModifier.defaultWeight(), horizontalAlignment = Alignment.CenterHorizontally) {
             Image(ImageProvider(bild), contentDescription = name, modifier = GlanceModifier.size(22.dp),
                 colorFilter = ColorFilter.tint(if (an) ColorProvider(farbe) else Fam.muted))
