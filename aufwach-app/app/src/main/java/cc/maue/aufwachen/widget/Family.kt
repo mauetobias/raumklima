@@ -103,7 +103,7 @@ fun FamHeader(
         return
     }
     // Zwei Spalten mit Haken oder Abzeichen rechts: Logo weglassen, damit der Text Platz hat
-    val showLogo = !(size.width < 170.dp && trailing != null)
+    val showLogo = !(size.width < 200.dp && trailing != null)
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (showLogo) logo()
         run {
