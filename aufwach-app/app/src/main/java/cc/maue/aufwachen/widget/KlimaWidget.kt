@@ -103,7 +103,8 @@ class KlimaWidget : GlanceAppWidget() {
             // Jede Änderung (Licht, Fenster, Neuladen) erhöht diese Zahl, dann zeichnet sich das Widget sofort neu
             val version = androidx.glance.currentState<androidx.datastore.preferences.core.Preferences>()[VERSION] ?: 0L
             val k = androidx.compose.runtime.remember(version) { zwischenstand(context) }
-            KlimaInhalt(k)
+            val h = androidx.compose.runtime.remember(version) { Haus.stand(context) }
+            KlimaInhalt(k, h)
         }
     }
 
@@ -296,8 +297,7 @@ private fun StatusLeiste(h: Haus.Stand, k: Klima, mitText: Boolean) {
 }
 
 @Composable
-fun KlimaInhalt(k: Klima) {
-    val h = Haus.stand(LocalContext.current)
+fun KlimaInhalt(k: Klima, h: Haus.Stand) {
     val size = LocalSize.current
     val f = k.feuchte?.let { "$it %" } ?: "··"
     val c = k.co2?.let { "$it ppm" } ?: "··"
