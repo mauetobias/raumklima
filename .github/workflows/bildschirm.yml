@@ -22,7 +22,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.11.1"
-      - run: gradle :app:assembleDebug --no-daemon
+      - run: gradle :app:assembleDebug -Pstore=true --no-daemon
         working-directory: aufwach-app
       - run: cp aufwach-app/app/build/outputs/apk/debug/app-debug.apk app.apk
       - name: KVM freischalten
