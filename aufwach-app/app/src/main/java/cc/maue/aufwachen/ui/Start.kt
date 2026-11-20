@@ -134,10 +134,18 @@ fun Startseite(tick: Int) {
         scope.launch {
             klima = withContext(Dispatchers.IO) { KlimaWidget.laden(c) }
             laedt = false
+            gespeichert()
             KlimaWidget.aktualisieren(c)
         }
     }
     LaunchedEffect(tick) { laden() }
+    // Kommt im Hintergrund eine Meldung (Licht, Fenster, Kamera, Hue), sofort neu zeichnen
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        val hp = c.getSharedPreferences("haus", android.content.Context.MODE_PRIVATE)
+        val hoerer = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> neu++ }
+        hp.registerOnSharedPreferenceChangeListener(hoerer)
+        onDispose { hp.unregisterOnSharedPreferenceChangeListener(hoerer) }
+    }
 
     var update by remember { mutableStateOf<Updater.Info?>(null) }
     LaunchedEffect(Unit) { if (!BuildConfig.STORE) update = withContext(Dispatchers.IO) { Updater.pruefen(c) } }
@@ -189,7 +197,7 @@ fun Startseite(tick: Int) {
 
     val seiten = listOf("Übersicht" to Icons.Rounded.Dashboard, "Automationen" to Icons.Rounded.AutoAwesome, "Protokoll" to Icons.AutoMirrored.Rounded.ReceiptLong)
     val pager = rememberPagerState { seiten.size }
-    val haus = remember(stand, klima) { Haus.stand(c) }
+    val haus = remember(stand) { Haus.stand(c) }
 
     @Composable
     fun Seite(titel: String, untertitel: @Composable () -> Unit, innen: PaddingValues, inhalt: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {

@@ -114,6 +114,7 @@ object Logik {
             am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, ms, pi)
         waechterStarten(app)
         Willkommen.registrieren(app)
+        HueHorcher.starten(app)
     }
 
     fun waechterStarten(c: Context) {

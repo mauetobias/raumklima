@@ -238,7 +238,7 @@ private fun HueKarte(stand: Int) {
             Zeile(Icons.Rounded.Lightbulb, "Bridge", "verbunden · ${cc.maue.aufwachen.Hue.lampen(c)} Lampen", MaterialTheme.colorScheme.onSurfaceVariant)
             Zeile(Icons.Rounded.Schedule, "Zuletzt abgefragt",
                 if (zuletzt == 0L) "noch nie" else java.time.Instant.ofEpochMilli(zuletzt).atZone(java.time.ZoneId.systemDefault()).format(TAG_HM),
-                MaterialTheme.colorScheme.onSurfaceVariant, beschreibung = "Beim Öffnen, beim Neuladen und mit dem Widget. Unterwegs über Google.")
+                MaterialTheme.colorScheme.onSurfaceVariant, beschreibung = "Zu Hause meldet die Bridge jede Änderung sofort. Unterwegs über Google.")
         } else {
             Text(laeuft ?: "Tippe auf Koppeln und drück dann innerhalb von 30 Sekunden den großen runden Knopf auf der Hue Bridge. Dein Handy muss dafür im WLAN zu Hause sein.",
                 style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
@@ -258,7 +258,7 @@ private fun HueKarte(stand: Int) {
                     }
                     laeuft = null; neu++
                     android.widget.Toast.makeText(c, if (ok) "Hue Bridge verbunden" else "Knopf wurde nicht gedrückt, bitte nochmal", android.widget.Toast.LENGTH_LONG).show()
-                    if (ok) cc.maue.aufwachen.widget.KlimaWidget.aktualisieren(c)
+                    if (ok) { cc.maue.aufwachen.widget.KlimaWidget.aktualisieren(c); cc.maue.aufwachen.HueHorcher.starten(c) }
                 }
             }) { Text("Koppeln") }
             else OutlinedButton(onClick = {

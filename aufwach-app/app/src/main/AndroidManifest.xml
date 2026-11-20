@@ -54,6 +54,15 @@
         </service>
 
         <service
+            android:name=".HueHorcher"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Hält im eigenen WLAN eine Verbindung zur Philips Hue Bridge, um Lichtänderungen sofort im Widget zu zeigen" />
+        </service>
+
+        <service
             android:name=".Waechter"
             android:exported="false"
             android:foregroundServiceType="specialUse">

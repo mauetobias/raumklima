@@ -95,40 +95,74 @@ private val Fam.MUTED_RAW get() = Color(0xFFC5C8B9)
 
 class KlimaWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
+    override val stateDefinition = androidx.glance.state.PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val k = withContext(Dispatchers.IO) { laden(context) }
-        provideContent { KlimaInhalt(k) }
+        withContext(Dispatchers.IO) { laden(context) }
+        provideContent {
+            // Jede Änderung (Licht, Fenster, Neuladen) erhöht diese Zahl, dann zeichnet sich das Widget sofort neu
+            val version = androidx.glance.currentState<androidx.datastore.preferences.core.Preferences>()[VERSION] ?: 0L
+            val k = androidx.compose.runtime.remember(version) { zwischenstand(context) }
+            KlimaInhalt(k)
+        }
+    }
+
+    class Arbeiter(c: Context, p: WorkerParameters) : Worker(c, p) {
+        override fun doWork(): Result {
+            laden(applicationContext)
+            runBlocking { neuZeichnen(applicationContext) }
+            return Result.success()
+        }
     }
 
     companion object {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        private val VERSION = androidx.datastore.preferences.core.longPreferencesKey("version")
 
-        fun aktualisieren(c: Context) { scope.launch { runCatching { KlimaWidget().updateAll(c.applicationContext) } } }
+        /** Nur neu zeichnen mit dem, was schon da ist (schnell, ohne Netz). */
+        suspend fun neuZeichnen(c: Context) {
+            val app = c.applicationContext
+            val ids = androidx.glance.appwidget.GlanceAppWidgetManager(app).getGlanceIds(KlimaWidget::class.java)
+            ids.forEach { id ->
+                androidx.glance.appwidget.state.updateAppWidgetState(app, id) { it[VERSION] = System.nanoTime() }
+                KlimaWidget().update(app, id)
+            }
+        }
+
+        /** Sofort neu zeichnen, z. B. wenn ein Licht angeht. */
+        fun aktualisieren(c: Context) { scope.launch { runCatching { neuZeichnen(c) } } }
+
+        /** Neu laden (Netz) und danach neu zeichnen. */
+        fun neuLaden(c: Context) { scope.launch { runCatching { withContext(Dispatchers.IO) { laden(c) }; neuZeichnen(c) } } }
 
         fun planen(c: Context) {
-            WorkManager.getInstance(c).enqueueUniquePeriodicWork("klima-widget", ExistingPeriodicWorkPolicy.KEEP,
+            WorkManager.getInstance(c).enqueueUniquePeriodicWork("klima-widget", ExistingPeriodicWorkPolicy.UPDATE,
                 PeriodicWorkRequestBuilder<Arbeiter>(15, TimeUnit.MINUTES).build())
         }
 
-        /** Holt den neuesten Stand. Klappt es nicht, wird der letzte bekannte gezeigt. */
+        /** Letzter bekannter Stand aus dem Zwischenspeicher. */
+        fun zwischenstand(c: Context): Klima {
+            val p = Logik.prefs(c)
+            if (Daten.schluessel(c).isEmpty()) return Klima.LEER.copy(fehler = "Schlüssel in der App eintragen")
+            val alt = p.getString("letzter_status", null) ?: return Klima.LEER
+            return runCatching { Klima.aus(JSONObject(alt), p.getString("letzter_fehler", null)) }.getOrDefault(Klima.LEER)
+        }
+
+        /** Holt den neuesten Stand und legt ihn in den Zwischenspeicher. */
         fun laden(c: Context): Klima {
             runCatching { cc.maue.aufwachen.Hue.abfragen(c) } // zu Hause: Licht direkt von der Bridge
             val p = Logik.prefs(c)
             if (Daten.schluessel(c).isEmpty()) return Klima.LEER.copy(fehler = "Schlüssel in der App eintragen")
             return try {
                 val s = Daten.status(c)
-                p.edit().putString("letzter_status", s.toString()).apply()
+                p.edit().putString("letzter_status", s.toString()).remove("letzter_fehler").apply()
                 Klima.aus(s)
             } catch (e: Exception) {
+                p.edit().putString("letzter_fehler", "offline").apply()
                 val alt = p.getString("letzter_status", null)
                 if (alt != null) Klima.aus(JSONObject(alt), "offline") else Klima.LEER.copy(fehler = "Keine Verbindung")
             }
         }
-    }
-
-    class Arbeiter(c: Context, p: WorkerParameters) : Worker(c, p) {
-        override fun doWork(): Result { runBlocking { KlimaWidget().updateAll(applicationContext) }; return Result.success() }
     }
 }
 
@@ -139,7 +173,8 @@ class KlimaWidgetEmpfaenger : GlanceAppWidgetReceiver() {
 
 class Neuladen : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        KlimaWidget().updateAll(context)
+        withContext(Dispatchers.IO) { KlimaWidget.laden(context) }
+        KlimaWidget.neuZeichnen(context)
     }
 }
 
