@@ -1,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Tropfen -->
+    <path android:fillColor="#F2F1E6"
+        android:pathData="M52,27C52,27 34,47 34,61A18,18 0,0 0,70 61C70,47 52,27 52,27Z" />
+    <!-- Welle im Tropfen -->
+    <path android:strokeColor="#30332B" android:strokeWidth="3.2" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M41,63q5.5,-4.5 11,0t11,0" />
+    <!-- kleine Sonne -->
+    <path android:fillColor="#FFB300" android:pathData="M72,38m-7,0a7,7 0,1 0,14 0a7,7 0,1 0,-14 0" />
+</vector>

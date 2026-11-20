@@ -17,10 +17,21 @@ object Daten {
 
     fun schluessel(c: Context) = Logik.prefs(c).getString("schluessel", "")!!.trim()
 
-    fun status(c: Context): JSONObject = JSONObject(laden(c, "status.enc"))
+    /** Mit dem Schlüssel „demo“ zeigt die App Beispielwerte (für die Prüfung im Play Store und zum Ausprobieren). */
+    fun demo(c: Context) = schluessel(c).equals("demo", ignoreCase = true)
+
+    fun status(c: Context): JSONObject {
+        if (demo(c)) return JSONObject().put("zeit", java.time.LocalDateTime.now().withSecond(0).toString())
+            .put("feuchte", 54).put("co2", 742).put("temperatur", 21.4).put("laerm", 36)
+            .put("entfeuchter_an", false).put("entfeuchter_tank_voll", false).put("nachtruhe", false)
+        return JSONObject(laden(c, "status.enc"))
+    }
 
     /** Alle Monate als eine CSV (Kopfzeile nur einmal). */
     fun exportCsv(c: Context): String {
+        if (demo(c)) return "zeit,feuchte,co2,temperatur\n" + (0 until 48).joinToString("\n") {
+            "${java.time.LocalDateTime.now().minusMinutes(30L * it).withSecond(0).withNano(0)},${52 + it % 5},${650 + it * 7 % 300},21.${it % 9}"
+        } + "\n"
         val monate = status(c).optJSONArray("monate") ?: return ""
         val sb = StringBuilder()
         for (i in 0 until monate.length()) {
