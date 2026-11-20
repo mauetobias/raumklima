@@ -157,6 +157,7 @@ class KlimaWidget : GlanceAppWidget() {
             return try {
                 val s = Daten.status(c)
                 p.edit().putString("letzter_status", s.toString()).remove("letzter_fehler").apply()
+                runCatching { cc.maue.aufwachen.Behaelter.pruefen(c, s) }
                 Klima.aus(s)
             } catch (e: Exception) {
                 p.edit().putString("letzter_fehler", "offline").apply()

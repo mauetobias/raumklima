@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Läuft knapp eine Stunde lang alle 5 Minuten. Danach startet der Workflow sich selbst neu.
+# Läuft knapp eine Stunde lang alle 2 Minuten. Danach startet der Workflow sich selbst neu.
 # Der Zeitplan von GitHub ist dabei nur noch Reserve, falls die Kette einmal reißt.
 set -u
 ENDE=$((SECONDS + ${LAUFZEIT:-3300}))
@@ -27,5 +27,5 @@ while :; do
   sichern
   [ "${AKTION:-normal}" != "normal" ] && break
   [ $SECONDS -ge $ENDE ] && break
-  sleep 300
+  sleep 120
 done

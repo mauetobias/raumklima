@@ -91,6 +91,9 @@ async def _zustand_holen():
         aus = {"roborock_akku": p.status.battery, "roborock_zustand": DEUTSCH.get(name, name or "unbekannt")}
         try:
             await p.clean_summary.refresh()
+            gesamt = getattr(p.clean_summary, "clean_time", None)
+            if gesamt:
+                aus["roborock_gesamt_minuten"] = round(gesamt / 60)  # Lebenszeit, für den Behälter-Zähler
             r = getattr(p.clean_summary, "last_clean_record", None)
             if r and r.begin:
                 aus["roborock_letzte_runde"] = datetime.fromtimestamp(r.begin, BERLIN).isoformat(timespec="minutes")
@@ -110,6 +113,10 @@ def zustand():
         aus = asyncio.run(asyncio.wait_for(_zustand_holen(), 75))
     except Exception as e:
         aus = {"roborock_zustand": "nicht erreichbar", "roborock_fehler": type(e).__name__}
+    # Ist er heute schon gefahren (auch von Hand), zählt das als Tagesrunde
+    letzte = aus.get("roborock_letzte_runde", "")
+    if letzte.startswith(heute) and aus.get("roborock_letzte_dauer", 0) >= 10:
+        speicher.schreiben("roborock_zuletzt", heute)
     aus["roborock_heute"] = speicher.lesen("roborock_zuletzt") == heute
     return aus
 

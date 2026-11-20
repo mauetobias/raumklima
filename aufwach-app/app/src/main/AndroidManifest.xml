@@ -43,6 +43,7 @@
         </receiver>
 
         <receiver android:name=".Willkommen$Ankunft" android:exported="false" />
+        <receiver android:name=".Behaelter$Geleert" android:exported="false" />
 
         <service
             android:name=".KameraHorcher"

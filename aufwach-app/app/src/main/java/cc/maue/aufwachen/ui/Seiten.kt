@@ -108,12 +108,17 @@ private fun dauerText(min: Long) = if (min < 60) "$min min" else "${min / 60} h 
 /** Roborock: Zustand, Akku, heute schon gefahren, letzte Runde. */
 @Composable
 private fun RoborockKarte(stand: Int) {
+    val ctx = LocalContext.current
     val s = boteStatus(stand)
     val akku = s?.optInt("roborock_akku", -1)?.takeIf { it >= 0 }
-    val ctx = LocalContext.current
     val live = remember(stand) { cc.maue.aufwachen.Haus.stand(ctx) }.roborockFaehrt
     val zustand = if (live == true) "saugt" else s?.optString("roborock_zustand", "")?.ifEmpty { null }
-    val heute = s?.optBoolean("roborock_heute", false) == true
+    val heuteDatum = java.time.LocalDate.now().toString()
+    val heute = s?.optBoolean("roborock_heute", false) == true ||
+        (s?.optString("roborock_letzte_runde", "").orEmpty().startsWith(heuteDatum) && (s?.optInt("roborock_letzte_dauer", 0) ?: 0) >= 10)
+    var behNeu by remember { mutableIntStateOf(0) }
+    val seit = remember(stand, behNeu) { cc.maue.aufwachen.Behaelter.seitLeeren(ctx, s) }
+    val grenze = remember(stand, behNeu) { cc.maue.aufwachen.Behaelter.grenze(ctx) }
     val faehrt = zustand?.startsWith("saugt") == true || zustand == "fährt zur Station"
     val letzte = s?.optString("roborock_letzte_runde", "").orEmpty()
     val erreichbar = zustand != null && zustand != "nicht erreichbar" && zustand != "nicht angemeldet"
@@ -138,6 +143,28 @@ private fun RoborockKarte(stand: Int) {
                 "Dauer" to (s?.optInt("roborock_letzte_dauer", -1)?.takeIf { it >= 0 }?.let { "$it min" } ?: "··"),
                 "Fläche" to (s?.optDouble("roborock_letzte_flaeche", -1.0)?.takeIf { it >= 0 }?.let { "${"%.0f".format(it)} m²" } ?: "··"),
             )
+            if (seit != null) {
+                val anteil = (seit.toFloat() / grenze).coerceIn(0f, 1f)
+                Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Staubbehälter", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Text(if (seit >= grenze) "leeren!" else "ca. ${(anteil * 100).roundToInt()} %", style = MaterialTheme.typography.labelLarge,
+                        color = if (seit >= grenze) Ampel.rot else MaterialTheme.colorScheme.primary)
+                }
+                Spacer(Modifier.height(6.dp))
+                androidx.compose.material3.LinearProgressIndicator(progress = { anteil }, modifier = Modifier.fillMaxWidth().height(8.dp),
+                    color = when { anteil >= 1f -> Ampel.rot; anteil >= 0.7f -> Ampel.orange; else -> Ampel.tuerkis },
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest, drawStopIndicator = {})
+                Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("$seit min gesaugt seit dem Leeren · Hinweis ab $grenze min", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                    androidx.compose.material3.TextButton(onClick = { cc.maue.aufwachen.Behaelter.geleert(ctx); behNeu++ }) { Text("Geleert") }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(30, 60, 90, 120).forEach { m ->
+                        FilterChip(grenze == m, { cc.maue.aufwachen.Behaelter.grenzeSetzen(ctx, m); behNeu++ }, label = { Text("$m min") })
+                    }
+                }
+            }
             Text(if (heute) "Fertig für heute. Morgen wieder zwischen 10 und 17 Uhr, wenn kein Termin ist."
                  else "Fährt heute zwischen 10 und 17 Uhr los, sobald kein Termin im Kalender steht.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 10.dp))
