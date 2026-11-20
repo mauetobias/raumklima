@@ -52,6 +52,7 @@ import cc.maue.aufwachen.Daten
 import cc.maue.aufwachen.Logik
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.time.Duration
 import java.time.LocalDateTime
@@ -222,8 +223,59 @@ fun LazyListScope.uebersicht(stand: Int) {
     }
 }
 
+/** Hue Bridge koppeln: danach kommt der Lichtstand zu Hause sofort statt über Google. */
+@Composable
+private fun HueKarte(stand: Int) {
+    val c = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var neu by remember { mutableIntStateOf(0) }
+    var laeuft by remember { mutableStateOf<String?>(null) }
+    val gekoppelt = remember(stand, neu) { cc.maue.aufwachen.Hue.gekoppelt(c) }
+    val zuletzt = remember(stand, neu) { cc.maue.aufwachen.Hue.zuletzt(c) }
+    Karte(Icons.Rounded.Lightbulb, "Philips Hue direkt",
+        if (gekoppelt) "Zu Hause kommt der Lichtstand sofort von der Bridge" else "Schneller als über Google: einmal koppeln", akzent = Ampel.lampe) {
+        if (gekoppelt) {
+            Zeile(Icons.Rounded.Lightbulb, "Bridge", "verbunden · ${cc.maue.aufwachen.Hue.lampen(c)} Lampen", MaterialTheme.colorScheme.onSurfaceVariant)
+            Zeile(Icons.Rounded.Schedule, "Zuletzt abgefragt",
+                if (zuletzt == 0L) "noch nie" else java.time.Instant.ofEpochMilli(zuletzt).atZone(java.time.ZoneId.systemDefault()).format(TAG_HM),
+                MaterialTheme.colorScheme.onSurfaceVariant, beschreibung = "Beim Öffnen, beim Neuladen und mit dem Widget. Unterwegs über Google.")
+        } else {
+            Text(laeuft ?: "Tippe auf Koppeln und drück dann innerhalb von 30 Sekunden den großen runden Knopf auf der Hue Bridge. Dein Handy muss dafür im WLAN zu Hause sein.",
+                style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+        }
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            if (!gekoppelt) androidx.compose.material3.FilledTonalButton(enabled = laeuft == null, onClick = {
+                laeuft = "Suche die Bridge …"
+                scope.launch {
+                    val ip = withContext(Dispatchers.IO) { runCatching { cc.maue.aufwachen.Hue.finden(c) }.getOrNull() }
+                    if (ip == null) { laeuft = null; android.widget.Toast.makeText(c, "Keine Hue Bridge gefunden. Bist du im WLAN zu Hause?", android.widget.Toast.LENGTH_LONG).show(); return@launch }
+                    var ok = false
+                    for (i in 30 downTo 1) {
+                        laeuft = "Jetzt den runden Knopf auf der Bridge drücken … noch $i s"
+                        ok = withContext(Dispatchers.IO) { runCatching { cc.maue.aufwachen.Hue.koppeln(c) }.getOrDefault(false) }
+                        if (ok) break
+                        kotlinx.coroutines.delay(1000)
+                    }
+                    laeuft = null; neu++
+                    android.widget.Toast.makeText(c, if (ok) "Hue Bridge verbunden" else "Knopf wurde nicht gedrückt, bitte nochmal", android.widget.Toast.LENGTH_LONG).show()
+                    if (ok) cc.maue.aufwachen.widget.KlimaWidget.aktualisieren(c)
+                }
+            }) { Text("Koppeln") }
+            else OutlinedButton(onClick = {
+                scope.launch {
+                    val ok = withContext(Dispatchers.IO) { cc.maue.aufwachen.Hue.abfragen(c) }
+                    neu++
+                    android.widget.Toast.makeText(c, if (ok) "Licht abgefragt" else "Bridge nicht erreichbar (nicht zu Hause?)", android.widget.Toast.LENGTH_SHORT).show()
+                    if (ok) cc.maue.aufwachen.widget.KlimaWidget.aktualisieren(c)
+                }
+            }) { Text("Jetzt abfragen") }
+        }
+    }
+}
+
 /** Seite 2: Automationen außerhalb der App (Bote bei GitHub und Google Home). */
 fun LazyListScope.boteAutomationen(stand: Int) {
+    item { HueKarte(stand) }
     item {
         val s = boteStatus(stand)
         val r = s?.optJSONObject("regeln")

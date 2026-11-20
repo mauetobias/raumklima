@@ -113,6 +113,7 @@ class KlimaWidget : GlanceAppWidget() {
 
         /** Holt den neuesten Stand. Klappt es nicht, wird der letzte bekannte gezeigt. */
         fun laden(c: Context): Klima {
+            runCatching { cc.maue.aufwachen.Hue.abfragen(c) } // zu Hause: Licht direkt von der Bridge
             val p = Logik.prefs(c)
             if (Daten.schluessel(c).isEmpty()) return Klima.LEER.copy(fehler = "Schlüssel in der App eintragen")
             return try {

@@ -34,6 +34,11 @@ object Haus {
         return t to p(c).getString("meldung_text", "").orEmpty()
     }
 
+    /** Stand direkt setzen (z. B. von der Hue Bridge). */
+    fun setzen(c: Context, art: String, name: String, wert: Boolean) {
+        p(c).edit().putBoolean("$art|$name", wert).putLong("zeit", System.currentTimeMillis()).apply()
+    }
+
     fun stand(c: Context): Stand {
         val alle = p(c).all.filterValues { it is Boolean }
         fun liste(art: String) = alle.filterKeys { it.startsWith("$art|") }.mapKeys { it.key.substringAfter('|') }
