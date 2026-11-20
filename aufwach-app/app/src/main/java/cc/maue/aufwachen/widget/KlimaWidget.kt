@@ -230,6 +230,35 @@ private fun HausRaster(h: Haus.Stand, k: Klima) {
     }
 }
 
+/** Ein Messwert: kleine Überschrift (mit Einheit), darunter groß die Zahl. */
+@Composable
+private fun Messwert(titel: String, wert: String, farbe: ColorProvider, groesse: Float, modifier: GlanceModifier) {
+    Column(modifier) {
+        Text(titel, style = TextStyle(fontSize = 11.sp, color = Fam.muted), maxLines = 1)
+        Text(wert, style = TextStyle(fontSize = groesse.sp, fontWeight = FontWeight.Bold, color = farbe), maxLines = 1)
+    }
+}
+
+/** Vier Symbole gleichmäßig verteilt, darunter optional ein Wort. Unten in der Karte. */
+@Composable
+private fun StatusLeiste(h: Haus.Stand, k: Klima, mitText: Boolean) {
+    @Composable
+    fun Feld(bild: Int, name: String, an: Boolean, farbe: Color, text: String) {
+        Column(GlanceModifier.defaultWeight(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(ImageProvider(bild), contentDescription = name, modifier = GlanceModifier.size(22.dp),
+                colorFilter = ColorFilter.tint(if (an) ColorProvider(farbe) else Fam.muted))
+            if (mitText) Text(text, style = TextStyle(fontSize = 10.sp, color = if (an) Fam.ink else Fam.muted, textAlign = TextAlign.Center,
+                fontWeight = if (an) FontWeight.Bold else FontWeight.Normal), maxLines = 1)
+        }
+    }
+    Row(GlanceModifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Feld(R.drawable.ic_lampe, "Licht", h.lichterAn.isNotEmpty(), GELB, lichtText(h))
+        Feld(R.drawable.ic_fenster, "Fenster", h.fensterAuf.isNotEmpty(), HIMMEL, fensterText(h))
+        Feld(R.drawable.ic_kamera, "Kamera", h.kameraAn == true, KAMERA_ROT, kameraText(h))
+        Feld(R.drawable.ic_entfeuchter, "Entfeuchter", k.entfeuchterAn || k.tankVoll, if (k.tankVoll) KAMERA_ROT else TUERKIS, entfeuchterText(k))
+    }
+}
+
 @Composable
 fun KlimaInhalt(k: Klima) {
     val h = Haus.stand(LocalContext.current)
@@ -241,7 +270,7 @@ fun KlimaInhalt(k: Klima) {
     val stand = when {
         k.fehler != null && k.stand.isEmpty() -> k.fehler
         k.fehler != null -> "Stand ${k.stand} · ${k.fehler}"
-        else -> "Stand ${k.stand}" + if ((k.co2 ?: 0) >= 1400) " · lüften!" else ""
+        else -> "Stand ${k.stand}" + if (k.live) " · live" else ""
     }
 
     // Eine Spalte breit: Werte untereinander, so viele wie Platz ist
@@ -285,27 +314,22 @@ fun KlimaInhalt(k: Klima) {
         }
         FamHeader({ FamLogo("🏠") }, "Raumklima", stand, trailing = { NeuladenKnopf() })
         FamCard {
-            Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                Column(GlanceModifier.defaultWeight()) {
-                    Text("Luftfeuchte", style = TextStyle(fontSize = 11.sp, color = Fam.muted), maxLines = 1)
-                    Wert(f, Farbe.feuchte(k.feuchte), 26f)
-                }
-                Column(GlanceModifier.defaultWeight()) {
-                    Text("CO₂", style = TextStyle(fontSize = 11.sp, color = Fam.muted), maxLines = 1)
-                    Wert(c, Farbe.co2(k.co2), 18f)
+            // Spaltenbreite bestimmt die Schriftgröße, damit nie etwas abgeschnitten wird
+            val spalte = (size.width - 48.dp) / 2
+            val gross = if (spalte >= 80.dp) 28f else if (spalte >= 62.dp) 24f else 20f
+            Row(GlanceModifier.fillMaxWidth()) {
+                Messwert("Luftfeuchte", k.feuchte?.let { "$it %" } ?: "··", ColorProvider(Farbe.feuchte(k.feuchte)), gross, GlanceModifier.defaultWeight())
+                Messwert("CO₂ in ppm", k.co2?.toString() ?: "··", ColorProvider(Farbe.co2(k.co2)), gross, GlanceModifier.defaultWeight())
+            }
+            if (size.height >= 200.dp) {
+                Spacer(GlanceModifier.height(8.dp))
+                Row(GlanceModifier.fillMaxWidth()) {
+                    Messwert("Temperatur", k.temperatur?.let { String.format("%.1f°", it).replace('.', ',') } ?: "··", Fam.ink, gross * 0.7f, GlanceModifier.defaultWeight())
+                    Messwert("Lärm in dB", k.laerm?.toString() ?: "··", Fam.ink, gross * 0.7f, GlanceModifier.defaultWeight())
                 }
             }
-            if (size.height >= 180.dp) {
-                FamLine("Temperatur", t, if (k.laerm != null) "${k.laerm} dB Lautstärke" else "")
-                Spacer(GlanceModifier.height(10.dp))
-                HausZeile(h, k, size.width >= 250.dp)
-            } else {
-                Row(GlanceModifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(t, style = TextStyle(fontSize = 12.sp, color = Fam.muted), maxLines = 1,
-                        modifier = GlanceModifier.defaultWeight())
-                    HausZeile(h, k, false)
-                }
-            }
+            Spacer(GlanceModifier.defaultWeight())
+            StatusLeiste(h, k, mitText = size.height >= 200.dp)
         }
     }
 }

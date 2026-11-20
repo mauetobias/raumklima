@@ -57,6 +57,7 @@ object Fam {
     val YELLOW = Color(0xFFFFD54F)
     val ORANGE = Color(0xFFFF9800)
     val RED = Color(0xFFF44336)
+    val inkRaw = Color(0xFFF2F1E6)
 
     /** Ein bis zwei Reihen hoch: alles in eine Zeile (Kopf mit dem Wichtigsten und Haken), mittig. */
     fun oneRow(s: DpSize) = s.height < 140.dp
