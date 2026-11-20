@@ -41,6 +41,7 @@ import cc.maue.aufwachen.Haus
 import cc.maue.aufwachen.widget.Klima
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Window
+import androidx.compose.material.icons.rounded.Videocam
 
 /** Grenzen aus regeln.yaml (Tag): ab 58 % an, unter 50 % aus. */
 private const val ZIEL_VON = 50
@@ -85,7 +86,7 @@ fun KlimaKarte(k: Klima, haus: Haus.Stand, laedt: Boolean, neuLaden: () -> Unit)
                         when {
                             k.fehler != null && k.stand.isEmpty() -> k.fehler
                             k.fehler != null -> "Stand ${k.stand} · ${k.fehler}"
-                            else -> "Stand ${k.stand} · Home Coach"
+                            else -> "Messung ${k.stand} · " + if (k.live) "live vom Home Coach" else "Home Coach"
                         },
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -102,15 +103,7 @@ fun KlimaKarte(k: Klima, haus: Haus.Stand, laedt: Boolean, neuLaden: () -> Unit)
                 Spacer(Modifier.weight(1f))
                 Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(bottom = 12.dp)) {
                     Status(feuchteSatz(k.feuchte), feuchteFarbe(k.feuchte))
-                    Spacer(Modifier.height(4.dp))
-                    Status(
-                        when {
-                            k.tankVoll -> "Tank voll, bitte leeren"
-                            k.entfeuchterAn -> "Entfeuchter läuft"
-                            else -> "Entfeuchter pausiert"
-                        },
-                        when { k.tankVoll -> Ampel.rot; k.entfeuchterAn -> Ampel.sonne; else -> MaterialTheme.colorScheme.outlineVariant },
-                    )
+                    if (k.tankVoll) { Spacer(Modifier.height(4.dp)); Status("Tank voll, bitte leeren", Ampel.rot) }
                 }
             }
             Skala(k.feuchte)
@@ -132,11 +125,19 @@ fun KlimaKarte(k: Klima, haus: Haus.Stand, laedt: Boolean, neuLaden: () -> Unit)
             }
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                HausKachel(Icons.Rounded.Lightbulb, "Licht", haus.lichterBekannt > 0 && haus.lichterAn.isNotEmpty(), Ampel.lampe,
-                    when { haus.lichterBekannt == 0 -> "noch unbekannt"; haus.lichterAn.isEmpty() -> "alles aus"; else -> haus.lichterAn.joinToString(", ") },
+                HausKachel(Icons.Rounded.Lightbulb, "Licht", haus.lichterAn.isNotEmpty(), Ampel.lampe,
+                    when { haus.lichterBekannt == 0 -> "?"; haus.lichterAn.isEmpty() -> "alles aus"; haus.lichterAn.size == 1 -> haus.lichterAn.first(); else -> "${haus.lichterAn.size} an" },
                     Modifier.weight(1f))
                 HausKachel(Icons.Rounded.Window, "Fenster", haus.fensterAuf.isNotEmpty(), Ampel.himmel,
-                    when { haus.fensterBekannt == 0 -> "noch unbekannt"; haus.fensterAuf.isEmpty() -> "alle zu"; else -> haus.fensterAuf.joinToString(", ") + " offen" },
+                    when { haus.fensterBekannt == 0 -> "?"; haus.fensterAuf.isEmpty() -> "alle zu"; haus.fensterAuf.size == 1 -> "${haus.fensterAuf.first()} offen"; else -> "${haus.fensterAuf.size} offen" },
+                    Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                HausKachel(Icons.Rounded.Videocam, "Kamera", haus.kameraAn == true, Ampel.rot,
+                    when (haus.kameraAn) { null -> "?"; true -> "nimmt auf"; false -> "aus" }, Modifier.weight(1f))
+                HausKachel(Icons.Rounded.Air, "Entfeuchter", k.entfeuchterAn || k.tankVoll, if (k.tankVoll) Ampel.rot else Ampel.tuerkis,
+                    when { k.tankVoll -> "Tank voll"; k.entfeuchterAn -> if (k.nacht) "läuft leise" else "läuft"; else -> "pausiert" },
                     Modifier.weight(1f))
             }
         }
@@ -189,14 +190,15 @@ private fun Kachel(icon: ImageVector, titel: String, wert: String, einheit: Stri
 private fun HausKachel(icon: ImageVector, titel: String, an: Boolean, farbe: Color, text: String, modifier: Modifier) {
     Surface(color = if (an) farbe.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceContainerHighest,
         shape = RoundedCornerShape(20.dp), modifier = modifier) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = if (an) farbe else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
-            Spacer(Modifier.width(10.dp))
-            Column {
+        Column(Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = if (an) farbe else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
                 Text(titel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(text, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (an) FontWeight.Bold else FontWeight.Normal),
-                    maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
+            Spacer(Modifier.height(6.dp))
+            Text(text, style = MaterialTheme.typography.titleSmall.copy(fontWeight = if (an) FontWeight.Bold else FontWeight.Normal),
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
     }
 }

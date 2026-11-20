@@ -41,6 +41,7 @@ object Ampel {
     val sonne = Color(0xFFFFB300)
     val lampe = Color(0xFFFFC94D)
     val himmel = Color(0xFF7CC4FF)
+    val tuerkis = Color(0xFF4DD0E1)
 }
 
 @Composable

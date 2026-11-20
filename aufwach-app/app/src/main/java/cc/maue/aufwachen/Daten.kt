@@ -24,7 +24,31 @@ object Daten {
         if (demo(c)) return JSONObject().put("zeit", java.time.LocalDateTime.now().withSecond(0).toString())
             .put("feuchte", 54).put("co2", 742).put("temperatur", 21.4).put("laerm", 36)
             .put("entfeuchter_an", false).put("entfeuchter_tank_voll", false).put("nachtruhe", false)
-        return JSONObject(laden(c, "status.enc"))
+        val s = JSONObject(laden(c, "status.enc"))
+        runCatching { live(s) }
+        return s
+    }
+
+    /**
+     * Holt die Werte des Home Coach direkt bei Netatmo, mit dem Zugangsschlüssel, den der Bote
+     * verschlüsselt im Status mitliefert. So zeigt Neuladen sofort den neuesten Messwert.
+     */
+    private fun live(s: JSONObject) {
+        val token = s.optString("netatmo_token", "")
+        if (token.isEmpty() || s.optLong("netatmo_bis", 0L) * 1000 < System.currentTimeMillis() + 60_000) return
+        val v = URL("https://api.netatmo.com/api/gethomecoachsdata").openConnection() as HttpURLConnection
+        v.setRequestProperty("Authorization", "Bearer $token")
+        v.connectTimeout = 10000; v.readTimeout = 15000
+        if (v.responseCode != 200) { v.disconnect(); return }
+        val o = JSONObject(v.inputStream.bufferedReader().readText()); v.disconnect()
+        val d = o.getJSONObject("body").getJSONArray("devices").getJSONObject(0).getJSONObject("dashboard_data")
+        if (d.has("Humidity")) s.put("feuchte", d.getInt("Humidity"))
+        if (d.has("CO2")) s.put("co2", d.getInt("CO2"))
+        if (d.has("Temperature")) s.put("temperatur", d.getDouble("Temperature"))
+        if (d.has("Noise")) s.put("laerm", d.getInt("Noise"))
+        if (d.has("time_utc")) s.put("zeit", java.time.LocalDateTime.ofInstant(
+            java.time.Instant.ofEpochSecond(d.getLong("time_utc")), java.time.ZoneId.systemDefault()).withNano(0).toString())
+        s.put("live", true)
     }
 
     /** Alle Monate als eine CSV (Kopfzeile nur einmal). */

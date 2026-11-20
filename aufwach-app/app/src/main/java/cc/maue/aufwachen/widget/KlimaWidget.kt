@@ -62,14 +62,14 @@ import java.util.concurrent.TimeUnit
 data class Klima(
     val feuchte: Int?, val co2: Int?, val temperatur: Double?, val laerm: Int?,
     val entfeuchterAn: Boolean, val tankVoll: Boolean, val nacht: Boolean,
-    val stand: String, val fehler: String? = null,
+    val stand: String, val fehler: String? = null, val live: Boolean = false,
 ) {
     companion object {
         fun aus(s: JSONObject, fehler: String? = null) = Klima(
             s.optInt("feuchte", -1).takeIf { it >= 0 }, s.optInt("co2", -1).takeIf { it >= 0 },
             if (s.has("temperatur")) s.optDouble("temperatur") else null, s.optInt("laerm", -1).takeIf { it >= 0 },
             s.optBoolean("entfeuchter_an"), s.optBoolean("entfeuchter_tank_voll"), s.optBoolean("nachtruhe"),
-            s.optString("zeit", "").let { if (it.length >= 16) it.substring(11, 16) else "" }, fehler,
+            s.optString("zeit", "").let { if (it.length >= 16) it.substring(11, 16) else "" }, fehler, s.optBoolean("live"),
         )
         val LEER = Klima(null, null, null, null, false, false, false, "", "Tippen zum Laden")
     }
@@ -159,13 +159,14 @@ private fun Wert(text: String, farbe: Color, groesse: Float) {
 private val GELB = Color(0xFFFFC94D)
 private val HIMMEL = Color(0xFF7CC4FF)
 
-/** Lampe gelb, wenn irgendein Licht an ist. Fenster himmelblau, wenn eins offen ist. */
+/** Lampe gelb, wenn irgendein Licht an ist. Fenster himmelblau, wenn eins offen ist. Kamera rot, wenn sie aufnimmt. */
+private val KAMERA_ROT = Color(0xFFFF6B6B)
+
 @Composable
-private fun HausSymbol(lampe: Boolean, an: Boolean, text: String?, groesse: androidx.compose.ui.unit.Dp = 18.dp) {
+private fun HausSymbol(bild: Int, beschreibung: String, an: Boolean, farbe: Color, text: String?, groesse: androidx.compose.ui.unit.Dp = 18.dp) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Image(ImageProvider(if (lampe) R.drawable.ic_lampe else R.drawable.ic_fenster),
-            contentDescription = if (lampe) "Licht" else "Fenster", modifier = GlanceModifier.size(groesse),
-            colorFilter = ColorFilter.tint(if (an) ColorProvider(if (lampe) GELB else HIMMEL) else Fam.muted))
+        Image(ImageProvider(bild), contentDescription = beschreibung, modifier = GlanceModifier.size(groesse),
+            colorFilter = ColorFilter.tint(if (an) ColorProvider(farbe) else Fam.muted))
         if (text != null) {
             Spacer(GlanceModifier.width(4.dp))
             Text(text, style = TextStyle(fontSize = 12.sp, color = if (an) Fam.ink else Fam.muted,
@@ -186,13 +187,46 @@ private fun fensterText(h: Haus.Stand) = when {
     h.fensterAuf.size == 1 -> "offen"
     else -> "${h.fensterAuf.size} offen"
 }
+private fun kameraText(h: Haus.Stand) = when (h.kameraAn) { null -> "?"; true -> "an"; false -> "aus" }
+
+private val TUERKIS = Color(0xFF4DD0E1)
+
+private fun entfeuchterText(k: Klima) = when { k.tankVoll -> "voll"; k.entfeuchterAn -> if (k.nacht) "leise" else "läuft"; else -> "aus" }
 
 @Composable
-private fun HausZeile(h: Haus.Stand, mitText: Boolean) {
+private fun EntfeuchterSymbol(k: Klima, mitText: Boolean) =
+    HausSymbol(R.drawable.ic_entfeuchter, "Entfeuchter", k.entfeuchterAn || k.tankVoll, if (k.tankVoll) KAMERA_ROT else TUERKIS,
+        if (mitText) entfeuchterText(k) else null)
+
+@Composable
+private fun HausZeile(h: Haus.Stand, k: Klima, mitText: Boolean) {
+    val abstand = if (mitText) 10.dp else 5.dp
     Row(verticalAlignment = Alignment.CenterVertically) {
-        HausSymbol(true, h.lichterAn.isNotEmpty(), if (mitText) lichtText(h) else null)
-        Spacer(GlanceModifier.width(if (mitText) 12.dp else 6.dp))
-        HausSymbol(false, h.fensterAuf.isNotEmpty(), if (mitText) fensterText(h) else null)
+        HausSymbol(R.drawable.ic_lampe, "Licht", h.lichterAn.isNotEmpty(), GELB, if (mitText) lichtText(h) else null)
+        Spacer(GlanceModifier.width(abstand))
+        HausSymbol(R.drawable.ic_fenster, "Fenster", h.fensterAuf.isNotEmpty(), HIMMEL, if (mitText) fensterText(h) else null)
+        Spacer(GlanceModifier.width(abstand))
+        HausSymbol(R.drawable.ic_kamera, "Kamera", h.kameraAn == true, KAMERA_ROT, if (mitText) kameraText(h) else null)
+        Spacer(GlanceModifier.width(abstand))
+        EntfeuchterSymbol(k, mitText)
+    }
+}
+
+/** Schmale Kachel: zwei mal zwei Symbole. */
+@Composable
+private fun HausRaster(h: Haus.Stand, k: Klima) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Row {
+            HausSymbol(R.drawable.ic_lampe, "Licht", h.lichterAn.isNotEmpty(), GELB, null)
+            Spacer(GlanceModifier.width(6.dp))
+            HausSymbol(R.drawable.ic_fenster, "Fenster", h.fensterAuf.isNotEmpty(), HIMMEL, null)
+        }
+        Spacer(GlanceModifier.height(4.dp))
+        Row {
+            HausSymbol(R.drawable.ic_kamera, "Kamera", h.kameraAn == true, KAMERA_ROT, null)
+            Spacer(GlanceModifier.width(6.dp))
+            EntfeuchterSymbol(k, false)
+        }
     }
 }
 
@@ -219,7 +253,7 @@ fun KlimaInhalt(k: Klima) {
                 Text("Feuchte", style = TextStyle(fontSize = 10.sp, color = Fam.muted), maxLines = 1)
                 if (size.height >= 140.dp) {
                     Spacer(GlanceModifier.height(6.dp))
-                    HausZeile(h, false)
+                    HausRaster(h, k)
                 }
                 if (size.height >= 100.dp) {
                     Spacer(GlanceModifier.height(6.dp))
@@ -231,12 +265,6 @@ fun KlimaInhalt(k: Klima) {
                     Text(k.temperatur?.let { String.format("%.0f°", it) } ?: "··",
                         style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Fam.ink), maxLines = 1)
                     Text("Temp.", style = TextStyle(fontSize = 10.sp, color = Fam.muted), maxLines = 1)
-                }
-                if (size.height >= 230.dp) {
-                    Spacer(GlanceModifier.height(6.dp))
-                    Text(if (k.tankVoll) "🪣" else if (k.entfeuchterAn) "💨" else "⏸",
-                        style = TextStyle(fontSize = 16.sp), maxLines = 1)
-                    Text("Entf.", style = TextStyle(fontSize = 10.sp, color = Fam.muted), maxLines = 1)
                 }
                 if (size.height >= 290.dp) {
                     Spacer(GlanceModifier.height(8.dp))
@@ -250,7 +278,9 @@ fun KlimaInhalt(k: Klima) {
     FamShell(null) {
         // Ein bis zwei Reihen hoch: alles Wichtige in den Kopf
         if (Fam.oneRow(size)) {
-            FamHeader({ FamLogo("💧", 32.dp) }, "$f · $c", "Licht ${lichtText(h)} · Fenster ${fensterText(h)} · $stand", trailing = { NeuladenKnopf() })
+            FamHeader({ FamLogo("💧", 32.dp) }, "$f · $c", stand, trailing = { NeuladenKnopf() })
+            Spacer(GlanceModifier.height(4.dp))
+            HausZeile(h, k, false)
             return@FamShell
         }
         FamHeader({ FamLogo("🏠") }, "Raumklima", stand, trailing = { NeuladenKnopf() })
@@ -267,14 +297,13 @@ fun KlimaInhalt(k: Klima) {
             }
             if (size.height >= 180.dp) {
                 FamLine("Temperatur", t, if (k.laerm != null) "${k.laerm} dB Lautstärke" else "")
-                FamLine("Entfeuchter", geraet.replaceFirstChar { it.uppercase() }, if (k.nacht) "Nachtruhe aktiv" else "")
                 Spacer(GlanceModifier.height(10.dp))
-                HausZeile(h, true)
+                HausZeile(h, k, size.width >= 250.dp)
             } else {
                 Row(GlanceModifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("$t · Entf. $geraet", style = TextStyle(fontSize = 12.sp, color = Fam.muted), maxLines = 1,
+                    Text(t, style = TextStyle(fontSize = 12.sp, color = Fam.muted), maxLines = 1,
                         modifier = GlanceModifier.defaultWeight())
-                    HausZeile(h, false)
+                    HausZeile(h, k, false)
                 }
             }
         }

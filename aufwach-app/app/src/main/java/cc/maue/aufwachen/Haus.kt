@@ -8,7 +8,8 @@ import android.content.Context
  * den letzten Stand je Gerät.
  */
 object Haus {
-    data class Stand(val lichterAn: List<String>, val lichterBekannt: Int, val fensterAuf: List<String>, val fensterBekannt: Int)
+    data class Stand(val lichterAn: List<String>, val lichterBekannt: Int, val fensterAuf: List<String>, val fensterBekannt: Int,
+                     val kameraAn: Boolean?)
 
     private fun p(c: Context) = c.getSharedPreferences("haus", Context.MODE_PRIVATE)
 
@@ -19,7 +20,7 @@ object Haus {
         val art = w.first().lowercase()
         val name = w.subList(1, w.size - 1).joinToString(" ")
         val wert = when (w.last().lowercase()) { "an", "auf", "offen", "on", "open" -> true; "aus", "zu", "off", "closed" -> false; else -> return false }
-        val schluessel = when (art) { "licht", "lampe" -> "licht"; "fenster", "tür", "tuer" -> "fenster"; else -> return false }
+        val schluessel = when (art) { "licht", "lampe" -> "licht"; "fenster", "tür", "tuer" -> "fenster"; "kamera" -> "kamera"; else -> return false }
         p(c).edit().putBoolean("$schluessel|$name", wert).putLong("zeit", System.currentTimeMillis()).apply()
         return true
     }
@@ -28,6 +29,8 @@ object Haus {
         val alle = p(c).all
         fun liste(art: String) = alle.filterKeys { it.startsWith("$art|") }.mapKeys { it.key.substringAfter('|') }
         val l = liste("licht"); val f = liste("fenster")
-        return Stand(l.filterValues { it == true }.keys.sorted(), l.size, f.filterValues { it == true }.keys.sorted(), f.size)
+        val k = liste("kamera")
+        return Stand(l.filterValues { it == true }.keys.sorted(), l.size, f.filterValues { it == true }.keys.sorted(), f.size,
+            if (k.isEmpty()) null else k.values.any { it == true })
     }
 }

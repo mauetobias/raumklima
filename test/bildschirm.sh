@@ -38,8 +38,9 @@ cat > /tmp/h.xml <<X
 <map>
     <boolean name="licht|Bett" value="true" />
     <boolean name="licht|Schreibtisch" value="false" />
-    <boolean name="fenster|Wohnzimmer" value="false" />
-    <boolean name="fenster|Schlafzimmer" value="false" />
+    <boolean name="fenster|links" value="false" />
+    <boolean name="fenster|rechts" value="false" />
+    <boolean name="kamera|Haustür" value="false" />
 </map>
 X
 adb push /tmp/h.xml /data/local/tmp/h.xml >/dev/null
