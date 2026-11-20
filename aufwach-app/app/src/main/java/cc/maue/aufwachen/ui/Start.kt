@@ -21,6 +21,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -208,6 +211,10 @@ fun Startseite(tick: Int) {
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth()
+                .windowInsetsTopHeight(WindowInsets.statusBars).background(MaterialTheme.colorScheme.background))
+        },
         bottomBar = {
             NavigationBar {
                 seiten.forEachIndexed { i, (name, icon) ->
