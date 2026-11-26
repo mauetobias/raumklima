@@ -5,7 +5,7 @@ Alle Regeln stehen in [`regeln.yaml`](regeln.yaml). Neue Geräte kommen als Date
 
 * **Luftentfeuchter (Comfee, NetHome Plus):** Home Coach über 58 % → an und entfeuchten, unter 50 % → ganz aus.
   Nachtruhe 22:30 bis 7:30: erst ab 62 %, dann leise und ohne Piepton. An und Aus übernimmt Google Home mit den Fensterkontakten.
-* **Roborock:** einmal am Tag zwischen 10 und 17 Uhr, nur wenn für 90 Minuten plus 15 Minuten Puffer kein Kalendertermin ansteht.
+* **Roborock:** einmal am Tag zwischen 10 und 17 Uhr, nur wenn für 90 Minuten plus 15 Minuten Puffer kein Kalendertermin ansteht, und erst eine Stunde nach dem Aufstehen. Die App meldet beim Aufwachen die Uhrzeit (verschlüsselt über einen geheimen ntfy.sh-Kanal, `aufstehen.py`); kommt keine Meldung, startet er frühestens um 12:30.
 
 Zugangsdaten liegen ausschließlich in den GitHub-Secrets, Zwischenstände verschlüsselt im Actions-Cache.
 

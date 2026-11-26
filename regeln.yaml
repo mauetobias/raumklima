@@ -29,6 +29,15 @@ geraete:
   #   an_unter: 45             # zu trocken -> befeuchten
   #   aus_ueber: 50
   #
+  # Badlüfter für frische Luft (kommt mit dem neuen Schalter): ist die Luft verbraucht und du bist weg,
+  # saugt der Abzug im Bad über die Fensterschlitze frische Luft in die Wohnung.
+  # - name: Badlüfter
+  #   typ: ...                 # kommt mit dem Gerät (z.B. Zwischenstecker oder Schalter in Google Home)
+  #   messwert: co2
+  #   an_ueber: 1000           # ppm, verbrauchte Luft
+  #   aus_unter: 750
+  #   nur_wenn_weg: true       # nur wenn niemand zu Hause ist (Meldung der App beim Gehen)
+  #
   # - name: Luftfilter
   #   typ: ...
   #   messwert: co2            # der Home Coach misst CO2, aber keinen Feinstaub
@@ -43,3 +52,5 @@ aufgaben:
     bis: "17:00"               # muss bis dahin fertig sein
     dauer_minuten: 90          # so lange braucht eine Runde ungefähr
     puffer_minuten: 15         # Abstand zum nächsten Termin
+    nach_aufstehen_minuten: 60 # erst eine Stunde nach dem Aufstehen (meldet die Raumklima-App beim Aufwachen)
+    ohne_aufstehen_ab: "12:30" # kommt keine Meldung (z.B. nicht zu Hause), dann frühestens ab hier

@@ -37,6 +37,8 @@ object Logik {
     fun aufwachen(c: Context, grund: String, fertig: (() -> Unit)? = null) {
         val app = c.applicationContext
         if (grund != "Test" && heuteSchon(app)) { fertig?.invoke(); return }
+        // Dem Boten melden, wann du aufgestanden bist (Roborock startet erst eine Stunde danach)
+        if (grund != "Test") Signal.aufgestanden(app, grund)
         val ziel = url(app)
         if (ziel.isEmpty()) { protokoll(app, "$grund erkannt, aber kein Link eingetragen"); fertig?.invoke(); return }
         if (grund != "Test") prefs(app).edit().putString("zuletzt", LocalDate.now().toString()).apply()

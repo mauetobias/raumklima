@@ -14,6 +14,7 @@ from roborock.data import UserData
 from roborock.devices.device_manager import UserParams, create_device_manager
 from roborock.web_api import RoborockApiClient
 
+import aufstehen
 import kalender
 import speicher
 
@@ -131,6 +132,21 @@ def zustand():
     return aus
 
 
+def aufstehen_warten(aufgabe, jetzt, aufgestanden=None):
+    """Text, worauf er noch wartet, oder None. [aufgestanden] nur für Tests, sonst von der App."""
+    minuten = aufgabe.get("nach_aufstehen_minuten", 0)
+    if not minuten:
+        return None
+    wach = aufgestanden if aufgestanden is not None else aufstehen.heute(jetzt)
+    if wach:
+        frei = wach + timedelta(minutes=minuten)
+        return None if jetzt >= frei else f"wartet bis {frei:%H:%M} (eine Stunde nach dem Aufstehen)"
+    spaet = aufgabe.get("ohne_aufstehen_ab")
+    if spaet and jetzt < _uhr(spaet, jetzt):
+        return f"wartet aufs Aufstehen (ohne Meldung ab {spaet})"
+    return None
+
+
 def ausfuehren(aufgabe, jetzt=None):
     jetzt = jetzt or datetime.now(BERLIN)
     heute = jetzt.date().isoformat()
@@ -141,6 +157,10 @@ def ausfuehren(aufgabe, jetzt=None):
     if not (_uhr(aufgabe["ab"], jetzt) <= jetzt and
             jetzt + timedelta(minutes=aufgabe["dauer_minuten"]) <= _uhr(aufgabe["bis"], jetzt)):
         return "außerhalb des Zeitfensters"
+    # Erst eine Stunde nach dem Aufstehen (die App meldet es). Ohne Meldung: erst ab einer späteren Uhrzeit.
+    warten = aufstehen_warten(aufgabe, jetzt)
+    if warten:
+        return warten
     if kalender.belegt(jetzt, jetzt + timedelta(minutes=aufgabe["dauer_minuten"] + aufgabe.get("puffer_minuten", 0))):
         return "Termin im Kalender, wartet"
     asyncio.run(_starten())
